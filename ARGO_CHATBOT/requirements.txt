@@ -9,3 +9,7 @@ requests
 python-dotenv
 pyautogui
 pillow
+langchain-groq
+langchain-core
+openpyxl
+numpy
