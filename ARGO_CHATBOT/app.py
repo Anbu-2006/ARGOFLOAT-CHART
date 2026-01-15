@@ -110,13 +110,27 @@ def get_status():
     """Check API and database connection status."""
     db = get_db_engine()
     if not db:
-        return jsonify({"status": "error", "database": "disconnected"}), 500
+        # Return more info for debugging
+        return jsonify({
+            "status": "error", 
+            "database": "disconnected",
+            "hint": "Check DATABASE_URL environment variable and Supabase pooler settings"
+        }), 500
     try:
         with db.connect() as connection:
-            connection.execute(text("SELECT 1"))
-        return jsonify({"status": "online", "database": "connected"})
+            result = connection.execute(text("SELECT COUNT(*) FROM argo_data"))
+            count = result.fetchone()[0]
+        return jsonify({
+            "status": "online", 
+            "database": "connected",
+            "records": count
+        })
     except Exception as e:
-        return jsonify({"status": "online", "database": "error", "message": str(e)}), 500
+        return jsonify({
+            "status": "online", 
+            "database": "error", 
+            "message": str(e)
+        }), 500
 
 
 @app.route('/api/query')
