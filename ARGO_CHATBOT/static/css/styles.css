@@ -692,15 +692,26 @@ body {
 
 .data-range-info {
     margin-top: 12px;
-    padding: 10px 14px;
-    background: var(--bg-card);
+    padding: 12px 14px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(14, 165, 233, 0.1));
     border-radius: var(--radius-sm);
     border-left: 3px solid var(--accent);
 }
 
 .data-range-main {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-primary);
+    font-weight: 600;
+}
+
+.data-range-main strong {
+    color: var(--accent);
+}
+
+.data-range-stats {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
     font-weight: 500;
 }
 

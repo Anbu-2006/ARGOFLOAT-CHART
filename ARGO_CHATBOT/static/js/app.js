@@ -234,9 +234,11 @@ async function checkStatus() {
                 const start = data.data_range.start;
                 const end = data.data_range.end;
                 const records = data.records ? data.records.toLocaleString() : '0';
+                const floats = data.unique_floats ? data.unique_floats.toLocaleString() : '0';
                 el.dataRangeInfo.innerHTML = `
-                    <div class="data-range-main">📅 ${start} to ${end} • ${records} records</div>
-                    <div class="data-range-note">💡 For more data, use the local version</div>
+                    <div class="data-range-main">📅 <strong>${start}</strong> to <strong>${end}</strong></div>
+                    <div class="data-range-stats">🌊 ${records} records • ${floats} ARGO floats</div>
+                    <div class="data-range-note">🔍 Bay of Bengal, Arabian Sea, Indian Ocean & more</div>
                 `;
             }
         } else {
