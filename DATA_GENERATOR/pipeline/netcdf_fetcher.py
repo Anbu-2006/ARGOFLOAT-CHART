@@ -116,6 +116,8 @@ def fetch_netcdf_dataset(start: datetime, end: datetime, progress_callback=None)
 
             try:
                 dataset = xr.open_dataset(temp_path)
+                # Store temp path for cleanup later
+                dataset.attrs["_local_temp_path"] = temp_path
                 print(f"Successfully fetched data from {server_name}")
                 if progress_callback:
                     progress_callback(f"Success! Data from {server_name}")
@@ -139,6 +141,3 @@ def fetch_netcdf_dataset(start: datetime, end: datetime, progress_callback=None)
     
     # All servers failed
     raise RuntimeError(f"All ERDDAP servers failed. Last error: {last_error}")
-
-    dataset.attrs["_local_temp_path"] = temp_path
-    return dataset
