@@ -17,40 +17,48 @@ import sql_builder
 def get_llm():
     """
     Initialize the LLM based on available API keys.
-    Priority: Google Gemini > Groq
+    Priority: Groq (fast & reliable) > Google Gemini
     """
     load_dotenv()
     
-    # Try Google Gemini first (free and powerful)
-    gemini_key = os.getenv("GOOGLE_API_KEY")
-    if gemini_key:
-        try:
-            from langchain_google_genai import ChatGoogleGenerativeAI
-            return ChatGoogleGenerativeAI(
-                model=os.getenv("GEMINI_MODEL", "gemini-1.5-flash"),
-                google_api_key=gemini_key,
-                temperature=0
-            )
-        except ImportError:
-            print("Warning: langchain-google-genai not installed. Trying Groq...")
-    
-    # Fallback to Groq
+    # Try Groq first (fast and reliable)
     groq_key = os.getenv("GROQ_API_KEY")
     if groq_key:
         try:
             from langchain_groq import ChatGroq
+            model = os.getenv("GROQ_MODEL_NAME", "llama-3.3-70b-versatile")
+            print(f"Using Groq model: {model}")
             return ChatGroq(
-                model=os.getenv("GROQ_MODEL_NAME", "llama-3.3-70b-versatile"),
+                model=model,
                 temperature=0,
                 api_key=groq_key
             )
         except ImportError:
-            print("Warning: langchain-groq not installed.")
+            print("Warning: langchain-groq not installed. Trying Gemini...")
+        except Exception as e:
+            print(f"Groq error: {e}. Trying Gemini...")
+    
+    # Fallback to Google Gemini
+    gemini_key = os.getenv("GOOGLE_API_KEY")
+    if gemini_key:
+        try:
+            from langchain_google_genai import ChatGoogleGenerativeAI
+            model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+            print(f"Using Gemini model: {model}")
+            return ChatGoogleGenerativeAI(
+                model=model,
+                google_api_key=gemini_key,
+                temperature=0
+            )
+        except ImportError:
+            print("Warning: langchain-google-genai not installed.")
+        except Exception as e:
+            print(f"Gemini error: {e}")
     
     raise RuntimeError(
-        "No LLM API key found! Please set either:\n"
-        "  - GOOGLE_API_KEY (for Google Gemini - FREE)\n"
-        "  - GROQ_API_KEY (for Groq)"
+        "No working LLM found! Please set either:\n"
+        "  - GROQ_API_KEY (for Groq - fast & free)\n"
+        "  - GOOGLE_API_KEY (for Google Gemini)"
     )
 
 # ------------------------------------------------------------------

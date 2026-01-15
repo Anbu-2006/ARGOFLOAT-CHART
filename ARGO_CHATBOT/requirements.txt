@@ -4,6 +4,7 @@
 # Web Framework
 flask
 flask-cors
+gunicorn
 
 # Database
 sqlalchemy
@@ -14,7 +15,7 @@ pandas
 numpy
 openpyxl
 
-# AI/LLM Integration (Choose ONE - Gemini is FREE and recommended)
+# AI/LLM Integration
 langchain-google-genai
 langchain-groq
 langchain-core
@@ -22,14 +23,3 @@ langchain-core
 # Environment & Utilities
 python-dotenv
 requests
-
-# SETUP NOTES:
-# 1. Google Gemini (FREE - Recommended):
-#    - Get API key: https://aistudio.google.com/apikey
-#    - Set GOOGLE_API_KEY in .env
-#    - 60 requests/minute free!
-#
-# 2. Groq (FREE - Alternative):
-#    - Get API key: https://console.groq.com/keys
-#    - Set GROQ_API_KEY in .env
-#    - Very fast inference

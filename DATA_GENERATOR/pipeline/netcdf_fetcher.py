@@ -5,7 +5,7 @@ import os
 import sys
 import tempfile
 from datetime import datetime, timezone
-from typing import Tuple
+from typing import Tuple, Optional
 
 import requests
 import xarray as xr
@@ -14,8 +14,7 @@ import xarray as xr
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from DATA_GENERATOR.config import (
-    DATASET_ID,
-    ERDDAP_BASE_URL,
+    ERDDAP_SERVERS,
     LATITUDE_RANGE,
     LONGITUDE_RANGE,
     PRESSURE_RANGE,
@@ -23,7 +22,8 @@ from DATA_GENERATOR.config import (
 )
 
 
-VARIABLES: Tuple[str, ...] = (
+# Variables for Ifremer BGC dataset
+VARIABLES_BGC: Tuple[str, ...] = (
     "platform_number",
     "time",
     "latitude",
@@ -35,8 +35,19 @@ VARIABLES: Tuple[str, ...] = (
     "doxy",
 )
 
+# Variables for NOAA standard ARGO dataset (different column names)
+VARIABLES_NOAA: Tuple[str, ...] = (
+    "platform_number",
+    "time",
+    "latitude",
+    "longitude",
+    "pres",
+    "temp",
+    "psal",
+)
 
-def build_erddap_url(start: datetime, end: datetime) -> str:
+
+def build_erddap_url(start: datetime, end: datetime, base_url: str, dataset_id: str, variables: Tuple[str, ...]) -> str:
     """Construct the ERDDAP NetCDF query URL for the configured dataset and region."""
     start_utc = start.astimezone(timezone.utc).replace(microsecond=0)
     end_utc = end.astimezone(timezone.utc).replace(microsecond=0)
@@ -45,18 +56,20 @@ def build_erddap_url(start: datetime, end: datetime) -> str:
     lat_min, lat_max = LATITUDE_RANGE
     lon_min, lon_max = LONGITUDE_RANGE
     pres_min, pres_max = PRESSURE_RANGE
-    variables = ",".join(VARIABLES)
+    var_str = ",".join(variables)
     query = (
         f"time>={start_iso}&time<={end_iso}"
         f"&latitude>={lat_min}&latitude<={lat_max}"
         f"&longitude>={lon_min}&longitude<={lon_max}"
         f"&pres>={pres_min}&pres<={pres_max}"
     )
-    return f"{ERDDAP_BASE_URL}{DATASET_ID}.nc?{variables}&{query}"
+    return f"{base_url}{dataset_id}.nc?{var_str}&{query}"
 
 
-def fetch_netcdf_dataset(start: datetime, end: datetime) -> xr.Dataset:
+def fetch_netcdf_dataset(start: datetime, end: datetime, progress_callback=None) -> xr.Dataset:
     """Download a NetCDF dataset from ERDDAP for the given time range.
+    
+    Tries multiple ERDDAP servers if the primary one fails.
 
     Parameters
     ----------
@@ -64,29 +77,68 @@ def fetch_netcdf_dataset(start: datetime, end: datetime) -> xr.Dataset:
         Inclusive start timestamp (UTC).
     end : datetime
         Inclusive end timestamp (UTC).
+    progress_callback : callable, optional
+        Function to call with status updates.
 
     Returns
     -------
     xr.Dataset
         The downloaded dataset ready for further processing.
     """
-    url = build_erddap_url(start, end)
-    # Download to a temporary file because xarray struggles with ERDDAP constraints
-    # when opening remote NetCDF resources directly.
-    response = requests.get(url, stream=True, timeout=REQUEST_TIMEOUT)
-    response.raise_for_status()
+    last_error = None
+    
+    for server in ERDDAP_SERVERS:
+        server_name = server["name"]
+        base_url = server["url"]
+        dataset_id = server["dataset"]
+        
+        # Choose variables based on dataset type
+        if "BGC" in dataset_id:
+            variables = VARIABLES_BGC
+        else:
+            variables = VARIABLES_NOAA
+        
+        if progress_callback:
+            progress_callback(f"Trying {server_name}...")
+        
+        try:
+            url = build_erddap_url(start, end, base_url, dataset_id, variables)
+            print(f"Fetching from {server_name}: {url[:100]}...")
+            
+            response = requests.get(url, stream=True, timeout=REQUEST_TIMEOUT)
+            response.raise_for_status()
 
-    with tempfile.NamedTemporaryFile(suffix=".nc", delete=False) as tmp:
-        for chunk in response.iter_content(chunk_size=1024 * 1024):
-            if chunk:
-                tmp.write(chunk)
-        temp_path = tmp.name
+            with tempfile.NamedTemporaryFile(suffix=".nc", delete=False) as tmp:
+                for chunk in response.iter_content(chunk_size=1024 * 1024):
+                    if chunk:
+                        tmp.write(chunk)
+                temp_path = tmp.name
 
-    try:
-        dataset = xr.open_dataset(temp_path)
-    except Exception:
-        os.remove(temp_path)
-        raise
+            try:
+                dataset = xr.open_dataset(temp_path)
+                print(f"Successfully fetched data from {server_name}")
+                if progress_callback:
+                    progress_callback(f"Success! Data from {server_name}")
+                return dataset
+            except Exception as e:
+                os.remove(temp_path)
+                raise e
+                
+        except requests.exceptions.Timeout:
+            last_error = f"{server_name} timed out after {REQUEST_TIMEOUT}s"
+            print(f"Server {server_name} timed out, trying next...")
+            continue
+        except requests.exceptions.RequestException as e:
+            last_error = f"{server_name}: {str(e)}"
+            print(f"Server {server_name} failed: {e}, trying next...")
+            continue
+        except Exception as e:
+            last_error = f"{server_name}: {str(e)}"
+            print(f"Error with {server_name}: {e}, trying next...")
+            continue
+    
+    # All servers failed
+    raise RuntimeError(f"All ERDDAP servers failed. Last error: {last_error}")
 
     dataset.attrs["_local_temp_path"] = temp_path
     return dataset

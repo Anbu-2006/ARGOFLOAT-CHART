@@ -18,7 +18,10 @@ except ImportError:
     get_intelligent_answer = None
 
 load_dotenv()
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg2://postgres:anbu2006@localhost:5432/argo_db")
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL environment variable is required!")
 
 # Get the directory where this script is located
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -325,8 +328,10 @@ def start_api_server(host: str = "127.0.0.1", port: int = 5000, debug: bool = Fa
     app.run(host=host, port=port, debug=debug, use_reloader=False)
 
 
-# --- RUN THE SERVER DIRECTLY (standalone use) ---
+# --- RUN THE SERVER ---
 if __name__ == '__main__':
-    # When run standalone, start with debug mode
-    start_api_server(host="127.0.0.1", port=5000, debug=True)
+    # Use PORT from environment (for deployment) or default to 5000
+    port = int(os.environ.get("PORT", 5000))
+    debug = os.environ.get("FLASK_DEBUG", "true").lower() == "true"
+    start_api_server(host="0.0.0.0", port=port, debug=debug)
 
