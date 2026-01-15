@@ -130,10 +130,26 @@ Now, based on your thoughts, provide the final JSON object. Return ONLY the JSON
 """
 
 SUMMARIZATION_PROMPT = """
-You are a helpful and insightful oceanographer's assistant. Your goal is to provide a clear, concise, and intelligent summary of the query results.
+You are a helpful oceanographer's assistant. Generate a specific, data-driven response based on the query results.
+
 User Question: "{question}"
-Result Data Summary: "{results_summary}"
-Based on the user's question and the data summary, write a one or two-sentence summary. Be polite and clear.
+Query Type: "{query_type}"
+Result Statistics: "{results_summary}"
+Sample Data: "{sample_data}"
+
+IMPORTANT RULES:
+1. Be SPECIFIC - mention actual numbers, float IDs, locations, temperatures, etc. from the data
+2. Be CONCISE - 2-3 sentences maximum
+3. DO NOT mention "data availability is limited" or similar phrases unless there are 0 results
+4. DO NOT repeat the same generic phrases for every response
+5. Include actionable insights based on the actual data values
+
+Examples of GOOD responses:
+- "Found 5 ARGO floats near Chennai, with distances ranging from 27km to 316km. Float 2902115 is the closest, currently at coordinates (13.2°N, 80.4°E)."
+- "The average temperature in Bay of Bengal is 28.5°C across 1,200 measurements. Surface temperatures (0-50m) average 29.2°C while deeper waters (500m+) average 8.4°C."
+- "Float 2903100 traveled 145km between September and December 2025, moving northwest from (10.2°N, 85.5°E) to (12.1°N, 83.2°E)."
+
+Now generate a response for this specific query:
 """
 
 def get_intelligent_answer(user_question: str):
@@ -438,32 +454,84 @@ def get_intelligent_answer(user_question: str):
                             row[m] = None
 
         num_records = len(data_records)
+        query_type = intent.get("query_type", "General")
+        
+        # Build detailed results summary based on query type
         results_summary_text = f"Found {num_records} records."
-        if not df.empty and 'distance_km' in df.columns:
-            results_summary_text += f" Distances range from {df['distance_km'].min():.2f} to {df['distance_km'].max():.2f} km."
-
-        # Improved empty result messages with data availability info
+        
+        # Add specific statistics based on query type and data
+        if not df.empty:
+            if 'distance_km' in df.columns:
+                min_dist = df['distance_km'].min()
+                max_dist = df['distance_km'].max()
+                results_summary_text = f"Found {num_records} floats. Closest: {min_dist:.1f}km, Farthest: {max_dist:.1f}km."
+            
+            if 'float_id' in df.columns:
+                unique_floats = df['float_id'].nunique()
+                float_ids = df['float_id'].unique()[:5].tolist()
+                results_summary_text += f" {unique_floats} unique float(s): {float_ids}."
+            
+            if 'temperature' in df.columns and df['temperature'].notna().any():
+                avg_temp = df['temperature'].mean()
+                min_temp = df['temperature'].min()
+                max_temp = df['temperature'].max()
+                results_summary_text += f" Temperature: avg {avg_temp:.1f}°C (range: {min_temp:.1f} - {max_temp:.1f}°C)."
+            
+            if 'salinity' in df.columns and df['salinity'].notna().any():
+                avg_sal = df['salinity'].mean()
+                results_summary_text += f" Avg salinity: {avg_sal:.2f} PSU."
+            
+            if 'latitude' in df.columns and 'longitude' in df.columns:
+                lat_range = f"{df['latitude'].min():.1f}° to {df['latitude'].max():.1f}°N"
+                lon_range = f"{df['longitude'].min():.1f}° to {df['longitude'].max():.1f}°E"
+                results_summary_text += f" Coverage: {lat_range}, {lon_range}."
+            
+            if 'timestamp' in df.columns:
+                try:
+                    if pd.api.types.is_datetime64_any_dtype(df['timestamp']):
+                        date_min = df['timestamp'].min().strftime('%b %d')
+                        date_max = df['timestamp'].max().strftime('%b %d, %Y')
+                    else:
+                        date_min = str(df['timestamp'].min())[:10]
+                        date_max = str(df['timestamp'].max())[:10]
+                    results_summary_text += f" Time span: {date_min} to {date_max}."
+                except:
+                    pass
+            
+            if 'pressure' in df.columns and df['pressure'].notna().any():
+                max_depth = df['pressure'].max()
+                results_summary_text += f" Max depth: {max_depth:.0f} dbar."
+        
+        # Build sample data string for LLM context
+        sample_data_str = ""
+        if data_records:
+            sample = data_records[:3]  # First 3 records as sample
+            sample_data_str = json.dumps(sample, default=str)[:500]  # Limit length
+        
+        # Handle empty results
         if num_records == 0:
-            if intent.get("query_type") == "Proximity":
-                results_summary_text += f" No floats found near the specified location. {data_range_info}. Try a different location or reduce the search radius. Valid locations: " + ", ".join(list(LOCATIONS.keys()))
-            elif intent.get("query_type") in ["Trajectory", "Profile"] and intent.get("float_id") is not None:
-                results_summary_text += f" No data found for float ID {intent['float_id']}. {data_range_info}. The float may not have data in this time period."
+            if query_type == "Proximity":
+                results_summary_text = f"No floats found near the specified location. Try a different location or increase search radius."
+            elif query_type in ["Trajectory", "Profile"] and intent.get("float_id"):
+                results_summary_text = f"No data found for float ID {intent['float_id']}. This float may not exist or have data in this period."
             else:
-                # Check if query mentions dates outside our range
                 time_constraint = intent.get("time_constraint", "")
                 if any(year in str(time_constraint).lower() for year in ["2020", "2021", "2022", "2023", "2024"]):
-                    results_summary_text = f"⚠️ The requested time period is outside our data range. {data_range_info}. Please query within the available date range."
+                    results_summary_text = f"The requested time period is outside our data range. {data_range_info}."
                 else:
-                    results_summary_text += f" No matching data found. {data_range_info}. Try broadening your query or checking available regions."
-        elif num_records == 1:
-            results_summary_text += f" Only one record found. {data_range_info}."
+                    results_summary_text = f"No matching data found. {data_range_info}."
         elif num_records < 10:
             results_summary_text += f" Few records found. {data_range_info}."
 
         summarization_prompt = PromptTemplate.from_template(SUMMARIZATION_PROMPT)
         summary_chain = summarization_prompt | llm | StrOutputParser()
         try:
-            summary = summary_chain.invoke({"question": user_question, "results_summary": results_summary_text})
+            summary = summary_chain.invoke({
+                "question": user_question, 
+                "results_summary": results_summary_text,
+                "query_type": query_type,
+                "sample_data": sample_data_str if sample_data_str else "No sample data"
+            })
         except Exception:
             # If summarization LLM call fails, fallback to internal summary
             summary = results_summary_text
