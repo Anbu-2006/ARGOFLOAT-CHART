@@ -76,14 +76,34 @@
             flex-shrink: 0;
         }
         
-        /* Data Panel */
+        /* Data Panel - Resizable */
         .data-panel {
             width: 400px;
+            min-width: 320px;
+            max-width: 600px;
             background: var(--bg-panel);
             border-left: 1px solid var(--border);
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            position: relative;
+        }
+        
+        .panel-resize-handle {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 6px;
+            cursor: ew-resize;
+            background: transparent;
+            z-index: 10;
+            transition: background 0.2s;
+        }
+        
+        .panel-resize-handle:hover,
+        .panel-resize-handle.active {
+            background: var(--accent);
         }
         
         .panel-header {
@@ -119,6 +139,11 @@
             text-align: center;
             padding: 24px 16px;
             color: var(--text-muted);
+        }
+        
+        .empty-state.hidden,
+        .loading-spinner.hidden {
+            display: none !important;
         }
         
         .empty-state svg {
@@ -484,6 +509,47 @@
             background: var(--bg-hover);
             color: var(--text-primary);
         }
+        
+        /* Float item selected state */
+        .float-item.selected {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1));
+            border-color: var(--accent);
+        }
+        
+        /* Two-panel layout when float selected */
+        .float-data.split-view {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .float-data.split-view .nearby-floats {
+            max-height: 200px;
+            overflow-y: auto;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+        
+        /* Collapsible sections */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding: 8px 0;
+        }
+        
+        .section-header .toggle-icon {
+            transition: transform 0.2s;
+        }
+        
+        .section-header.collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+        
+        .section-content.collapsed {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -516,14 +582,15 @@
         </div>
         
         <!-- Data Panel -->
-        <div class="data-panel">
+        <div class="data-panel" id="dataPanel">
+            <div class="panel-resize-handle" id="resizeHandle"></div>
             <div class="panel-header">
                 <span class="panel-title" id="panelTitle">Float Data</span>
                 <span class="float-badge hidden" id="floatBadge"></span>
             </div>
             
             <div class="panel-content" id="panelContent">
-                <!-- Empty State -->
+                <!-- Empty State - Only shown initially -->
                 <div class="empty-state" id="emptyState">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
@@ -533,10 +600,10 @@
                     <p>Click any ocean location to find nearby floats</p>
                 </div>
                 
-                <!-- Loading State -->
+                <!-- Loading State - Hidden properly -->
                 <div class="loading-spinner hidden" id="loadingState">
                     <div class="spinner"></div>
-                    <div class="loading-text">Searching for floats...</div>
+                    <p>Searching for floats...</p>
                 </div>
                 
                 <!-- Clicked Location Info -->
@@ -662,6 +729,8 @@
         const $ = id => document.getElementById(id);
         const el = {
             map: $('interactiveMap'),
+            dataPanel: $('dataPanel'),
+            resizeHandle: $('resizeHandle'),
             statusDot: $('statusDot'),
             statusText: $('statusText'),
             panelTitle: $('panelTitle'),
@@ -692,7 +761,38 @@
             initMap();
             checkStatus();
             initEventListeners();
+            initResizeHandle();
         });
+        
+        function initResizeHandle() {
+            let isResizing = false;
+            let startX, startWidth;
+            
+            el.resizeHandle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                startX = e.clientX;
+                startWidth = el.dataPanel.offsetWidth;
+                el.resizeHandle.classList.add('active');
+                document.body.style.cursor = 'ew-resize';
+                document.body.style.userSelect = 'none';
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const diff = startX - e.clientX;
+                const newWidth = Math.min(600, Math.max(320, startWidth + diff));
+                el.dataPanel.style.width = newWidth + 'px';
+            });
+            
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    el.resizeHandle.classList.remove('active');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            });
+        }
         
         function initMap() {
             map = L.map(el.map, {
@@ -711,9 +811,95 @@
         }
         
         function initEventListeners() {
-            el.viewTrajectoryBtn.addEventListener('click', loadFullTrajectory);
-            el.viewProfileBtn.addEventListener('click', loadFullProfile);
+            el.viewTrajectoryBtn.addEventListener('click', () => loadFullTrajectory());
+            el.viewProfileBtn.addEventListener('click', () => loadFullProfile());
             el.exportBtn.addEventListener('click', exportData);
+        }
+        
+        // Load full trajectory data for selected float
+        async function loadFullTrajectory() {
+            if (!selectedFloatId) {
+                alert('Please select a float first');
+                return;
+            }
+            
+            try {
+                // Show loading
+                el.viewTrajectoryBtn.disabled = true;
+                el.viewTrajectoryBtn.innerHTML = '<div class="spinner" style="width:14px;height:14px;"></div> Loading...';
+                
+                // Fetch full trajectory from API
+                const response = await fetch(`${API_BASE}/api/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        query: `Show trajectory for float ${selectedFloatId}` 
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.data && result.data.length > 0) {
+                    floatGroups[selectedFloatId] = result.data;
+                    showTrajectory(result.data);
+                } else if (floatGroups[selectedFloatId]) {
+                    showTrajectory(floatGroups[selectedFloatId]);
+                } else {
+                    alert('No trajectory data available');
+                }
+            } catch (error) {
+                console.error('Error loading trajectory:', error);
+                alert('Failed to load trajectory data');
+            } finally {
+                el.viewTrajectoryBtn.disabled = false;
+                el.viewTrajectoryBtn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                    Trajectory`;
+            }
+        }
+        
+        // Load full profile data for selected float
+        async function loadFullProfile() {
+            if (!selectedFloatId) {
+                alert('Please select a float first');
+                return;
+            }
+            
+            try {
+                el.viewProfileBtn.disabled = true;
+                el.viewProfileBtn.innerHTML = '<div class="spinner" style="width:14px;height:14px;"></div> Loading...';
+                
+                const response = await fetch(`${API_BASE}/api/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        query: `Show depth profile for float ${selectedFloatId}` 
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.data && result.data.length > 0) {
+                    floatGroups[selectedFloatId] = result.data;
+                    showProfile(result.data);
+                } else if (floatGroups[selectedFloatId]) {
+                    showProfile(floatGroups[selectedFloatId]);
+                } else {
+                    alert('No profile data available');
+                }
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                alert('Failed to load profile data');
+            } finally {
+                el.viewProfileBtn.disabled = false;
+                el.viewProfileBtn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 20V10m-6 10V4M6 20v-6"/>
+                    </svg>
+                    Profile`;
+            }
         }
         
         async function checkStatus() {
@@ -979,14 +1165,23 @@
         function selectFloat(floatId, points) {
             selectedFloatId = floatId;
             
-            // Store local points in floatGroups for now
+            // Store local points in floatGroups
             floatGroups[floatId] = points;
             
-            // Update UI
+            // Update selected state in float list
+            el.floatList.querySelectorAll('.float-item').forEach(item => {
+                item.classList.remove('selected');
+                if (item.dataset.floatId === floatId) {
+                    item.classList.add('selected');
+                }
+            });
+            
+            // Update UI - keep nearby floats visible but add float info
             el.floatBadge.textContent = `Float ${floatId}`;
             el.floatBadge.classList.remove('hidden');
             el.panelTitle.textContent = 'Float Details';
-            el.nearbyFloats.classList.add('hidden');
+            el.floatData.classList.add('split-view'); // Enable split view
+            el.nearbyFloats.classList.remove('hidden'); // Keep float list visible
             el.floatInfo.classList.remove('hidden');
             el.panelActions.classList.remove('hidden');
             
@@ -1027,34 +1222,46 @@
             // Center map on float
             map.setView([latest.latitude, latest.longitude], 7);
             
-            // Add back to list button
-            addBackButton();
+            // Add clear selection button
+            addClearSelectionBtn();
         }
         
-        function addBackButton() {
-            // Add back button if not already there
-            if (!document.querySelector('.back-to-floats')) {
-                const backBtn = document.createElement('button');
-                backBtn.className = 'back-to-floats';
-                backBtn.innerHTML = '← Back to Float List';
-                backBtn.onclick = () => {
-                    el.floatInfo.classList.add('hidden');
-                    el.panelActions.classList.add('hidden');
-                    el.nearbyFloats.classList.remove('hidden');
-                    el.floatBadge.classList.add('hidden');
-                    el.panelTitle.textContent = 'Nearby Floats';
-                    el.trajectorySection.classList.add('hidden');
-                    el.depthProfile.classList.add('hidden');
-                    
-                    // Clear trajectory
-                    if (trajectoryPath) trajectoryPath.remove();
-                    trajectoryMarkers.forEach(m => m.remove());
-                    trajectoryMarkers = [];
-                    
-                    backBtn.remove();
-                };
-                el.floatInfo.insertBefore(backBtn, el.floatInfo.firstChild);
-            }
+        function addClearSelectionBtn() {
+            // Remove existing button if any
+            const existing = document.querySelector('.back-to-floats');
+            if (existing) existing.remove();
+            
+            // Create new button
+            const clearBtn = document.createElement('button');
+            clearBtn.className = 'back-to-floats';
+            clearBtn.innerHTML = '✕ Clear Selection';
+            clearBtn.onclick = () => {
+                // Reset selection
+                selectedFloatId = null;
+                el.floatData.classList.remove('split-view');
+                el.floatInfo.classList.add('hidden');
+                el.panelActions.classList.add('hidden');
+                el.floatBadge.classList.add('hidden');
+                el.profileSection.classList.add('hidden');
+                el.trajectorySection.classList.add('hidden');
+                el.panelTitle.textContent = Object.keys(floatGroups).length + ' Floats Found';
+                
+                // Remove selected state from list items
+                el.floatList.querySelectorAll('.float-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                
+                // Clear trajectory from map
+                if (trajectoryPath) {
+                    trajectoryPath.remove();
+                    trajectoryPath = null;
+                }
+                trajectoryMarkers.forEach(m => m.remove());
+                trajectoryMarkers = [];
+                
+                clearBtn.remove();
+            };
+            el.floatInfo.insertBefore(clearBtn, el.floatInfo.firstChild);
         }
         
         async function loadFullFloatData(floatId) {
@@ -1084,16 +1291,7 @@
             }
         }
         
-        async function showTrajectory() {
-            if (!selectedFloatId) return;
-            
-            // Load full float data first
-            let points = floatGroups[selectedFloatId];
-            if (!points || points.length < 10) {
-                // Might need more data - try to fetch full trajectory
-                points = await loadFullFloatData(selectedFloatId);
-            }
-            
+        function showTrajectory(points) {
             if (!points || points.length < 2) {
                 alert('Not enough data points to show trajectory');
                 return;
@@ -1123,20 +1321,25 @@
             // Add start marker (green)
             const startMarker = L.circleMarker(pathPoints[0], {
                 radius: 10, fillColor: '#22c55e', fillOpacity: 1, color: 'white', weight: 2
-            }).addTo(map).bindPopup(`<strong>Start</strong><br>${sorted[0].timestamp || 'Unknown'}`);
+            }).addTo(map).bindPopup(`<strong>🟢 Start</strong><br>${sorted[0].timestamp || 'Unknown date'}`);
             trajectoryMarkers.push(startMarker);
             
             // Add end marker (red)
             const endMarker = L.circleMarker(pathPoints[pathPoints.length - 1], {
                 radius: 10, fillColor: '#ef4444', fillOpacity: 1, color: 'white', weight: 2
-            }).addTo(map).bindPopup(`<strong>End</strong><br>${sorted[sorted.length-1].timestamp || 'Unknown'}`);
+            }).addTo(map).bindPopup(`<strong>🔴 End</strong><br>${sorted[sorted.length-1].timestamp || 'Unknown date'}`);
             trajectoryMarkers.push(endMarker);
             
-            // Calculate distance
+            // Calculate distance using haversine
             let totalDistance = 0;
             for (let i = 1; i < pathPoints.length; i++) {
                 totalDistance += haversine(pathPoints[i-1][0], pathPoints[i-1][1], pathPoints[i][0], pathPoints[i][1]);
             }
+            
+            // Calculate time span
+            const startDate = new Date(sorted[0].timestamp);
+            const endDate = new Date(sorted[sorted.length-1].timestamp);
+            const daysDiff = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
             
             // Show trajectory stats
             el.trajectorySection.classList.remove('hidden');
@@ -1149,20 +1352,16 @@
                     <div class="traj-stat-value">${pathPoints.length}</div>
                     <div class="traj-stat-label">data points</div>
                 </div>
+                <div class="traj-stat">
+                    <div class="traj-stat-value">${daysDiff || '--'}</div>
+                    <div class="traj-stat-label">days</div>
+                </div>
             `;
             
             map.fitBounds(trajectoryPath.getBounds(), { padding: [50, 50] });
         }
         
-        async function showProfile() {
-            if (!selectedFloatId) return;
-            
-            // Load full float data first
-            let points = floatGroups[selectedFloatId];
-            if (!points || points.length < 10) {
-                points = await loadFullFloatData(selectedFloatId);
-            }
-            
+        function showProfile(points) {
             if (!points || points.length === 0) {
                 alert('No data available for profile');
                 return;
