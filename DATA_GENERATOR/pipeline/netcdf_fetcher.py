@@ -1,76 +1,35 @@
-"""Utility functions to download ARGO observations from ERDDAP as NetCDF."""
+"""Utility functions to download ARGO observations from Argovis API."""
 from __future__ import annotations
 
 import os
 import sys
-import tempfile
 from datetime import datetime, timezone
-from typing import Tuple, Optional
+from typing import List, Dict, Any, Optional, Callable
 
+import pandas as pd
 import requests
-import xarray as xr
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from DATA_GENERATOR.config import (
-    ERDDAP_SERVERS,
     LATITUDE_RANGE,
     LONGITUDE_RANGE,
-    PRESSURE_RANGE,
     REQUEST_TIMEOUT,
 )
 
-
-# Variables for Ifremer BGC dataset
-VARIABLES_BGC: Tuple[str, ...] = (
-    "platform_number",
-    "time",
-    "latitude",
-    "longitude",
-    "pres",
-    "temp",
-    "psal",
-    "chla",
-    "doxy",
-)
-
-# Variables for NOAA standard ARGO dataset (different column names)
-VARIABLES_NOAA: Tuple[str, ...] = (
-    "platform_number",
-    "time",
-    "latitude",
-    "longitude",
-    "pres",
-    "temp",
-    "psal",
-)
+# Argovis API - Official REST API for ARGO data
+# Documentation: https://argovis-api.colorado.edu/docs/
+ARGOVIS_BASE_URL = "https://argovis-api.colorado.edu"
 
 
-def build_erddap_url(start: datetime, end: datetime, base_url: str, dataset_id: str, variables: Tuple[str, ...]) -> str:
-    """Construct the ERDDAP NetCDF query URL for the configured dataset and region."""
-    start_utc = start.astimezone(timezone.utc).replace(microsecond=0)
-    end_utc = end.astimezone(timezone.utc).replace(microsecond=0)
-    start_iso = start_utc.isoformat().replace("+00:00", "Z")
-    end_iso = end_utc.isoformat().replace("+00:00", "Z")
-    lat_min, lat_max = LATITUDE_RANGE
-    lon_min, lon_max = LONGITUDE_RANGE
-    pres_min, pres_max = PRESSURE_RANGE
-    var_str = ",".join(variables)
-    query = (
-        f"time>={start_iso}&time<={end_iso}"
-        f"&latitude>={lat_min}&latitude<={lat_max}"
-        f"&longitude>={lon_min}&longitude<={lon_max}"
-        f"&pres>={pres_min}&pres<={pres_max}"
-    )
-    return f"{base_url}{dataset_id}.nc?{var_str}&{query}"
-
-
-def fetch_netcdf_dataset(start: datetime, end: datetime, progress_callback=None) -> xr.Dataset:
-    """Download a NetCDF dataset from ERDDAP for the given time range.
+def fetch_argo_data(
+    start: datetime,
+    end: datetime,
+    progress_callback: Optional[Callable[[str], None]] = None
+) -> pd.DataFrame:
+    """Download ARGO float data from Argovis API for the given time range.
     
-    Tries multiple ERDDAP servers if the primary one fails.
-
     Parameters
     ----------
     start : datetime
@@ -82,62 +41,153 @@ def fetch_netcdf_dataset(start: datetime, end: datetime, progress_callback=None)
 
     Returns
     -------
-    xr.Dataset
-        The downloaded dataset ready for further processing.
+    pd.DataFrame
+        DataFrame with columns: float_id, timestamp, latitude, longitude, 
+        pressure, temperature, salinity, dissolved_oxygen, chlorophyll
     """
-    last_error = None
-    
-    for server in ERDDAP_SERVERS:
-        server_name = server["name"]
-        base_url = server["url"]
-        dataset_id = server["dataset"]
-        
-        # Choose variables based on dataset type
-        if "BGC" in dataset_id:
-            variables = VARIABLES_BGC
-        else:
-            variables = VARIABLES_NOAA
-        
+    def log(msg: str) -> None:
         if progress_callback:
-            progress_callback(f"Trying {server_name}...")
-        
-        try:
-            url = build_erddap_url(start, end, base_url, dataset_id, variables)
-            print(f"Fetching from {server_name}: {url[:100]}...")
-            
-            response = requests.get(url, stream=True, timeout=REQUEST_TIMEOUT)
-            response.raise_for_status()
-
-            with tempfile.NamedTemporaryFile(suffix=".nc", delete=False) as tmp:
-                for chunk in response.iter_content(chunk_size=1024 * 1024):
-                    if chunk:
-                        tmp.write(chunk)
-                temp_path = tmp.name
-
-            try:
-                dataset = xr.open_dataset(temp_path)
-                # Store temp path for cleanup later
-                dataset.attrs["_local_temp_path"] = temp_path
-                print(f"Successfully fetched data from {server_name}")
-                if progress_callback:
-                    progress_callback(f"Success! Data from {server_name}")
-                return dataset
-            except Exception as e:
-                os.remove(temp_path)
-                raise e
-                
-        except requests.exceptions.Timeout:
-            last_error = f"{server_name} timed out after {REQUEST_TIMEOUT}s"
-            print(f"Server {server_name} timed out, trying next...")
-            continue
-        except requests.exceptions.RequestException as e:
-            last_error = f"{server_name}: {str(e)}"
-            print(f"Server {server_name} failed: {e}, trying next...")
-            continue
-        except Exception as e:
-            last_error = f"{server_name}: {str(e)}"
-            print(f"Error with {server_name}: {e}, trying next...")
-            continue
+            progress_callback(msg)
+        print(msg)
     
-    # All servers failed
-    raise RuntimeError(f"All ERDDAP servers failed. Last error: {last_error}")
+    # Convert to UTC ISO format
+    start_utc = start.astimezone(timezone.utc)
+    end_utc = end.astimezone(timezone.utc)
+    
+    lat_min, lat_max = LATITUDE_RANGE
+    lon_min, lon_max = LONGITUDE_RANGE
+    
+    # Build bounding box: [[lon_min, lat_min], [lon_max, lat_max]]
+    box = f"[[{lon_min},{lat_min}],[{lon_max},{lat_max}]]"
+    
+    url = f"{ARGOVIS_BASE_URL}/argo"
+    params = {
+        "startDate": start_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "endDate": end_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "box": box,
+        "data": "pressure,temperature,salinity,doxy,chla"
+    }
+    
+    log(f"🌐 Fetching from Argovis API...")
+    log(f"📅 Date range: {start_utc.date()} to {end_utc.date()}")
+    log(f"📍 Region: {lat_min}°-{lat_max}° lat, {lon_min}°-{lon_max}° lon")
+    
+    try:
+        response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()
+        profiles = response.json()
+        
+        if isinstance(profiles, dict) and "message" in profiles:
+            raise RuntimeError(f"API Error: {profiles['message']}")
+        
+        log(f"✅ Received {len(profiles)} profiles from Argovis")
+        
+        if not profiles:
+            return pd.DataFrame()
+        
+        # Convert profiles to flat records
+        records = []
+        for profile in profiles:
+            float_id = profile.get("_id", "").split("_")[0]
+            timestamp = profile.get("timestamp")
+            
+            geo = profile.get("geolocation", {})
+            coords = geo.get("coordinates", [None, None])
+            longitude = coords[0]
+            latitude = coords[1]
+            
+            # Get data arrays
+            data = profile.get("data", [])
+            data_info = profile.get("data_info", [[]])
+            
+            # Map data arrays by name
+            var_names = data_info[0] if data_info else []
+            data_map = {}
+            for i, name in enumerate(var_names):
+                if i < len(data):
+                    data_map[name] = data[i]
+            
+            pressure_arr = data_map.get("pressure", [])
+            temp_arr = data_map.get("temperature", [])
+            sal_arr = data_map.get("salinity", [])
+            doxy_arr = data_map.get("doxy", [])
+            chla_arr = data_map.get("chla", [])
+            
+            # Create a record for each depth level
+            num_levels = len(pressure_arr) if pressure_arr else 0
+            
+            for i in range(num_levels):
+                pressure = pressure_arr[i] if i < len(pressure_arr) else None
+                temperature = temp_arr[i] if i < len(temp_arr) else None
+                salinity = sal_arr[i] if i < len(sal_arr) else None
+                dissolved_oxygen = doxy_arr[i] if i < len(doxy_arr) else None
+                chlorophyll = chla_arr[i] if i < len(chla_arr) else None
+                
+                # Skip if no valid measurements
+                if temperature is None and salinity is None:
+                    continue
+                
+                records.append({
+                    "float_id": int(float_id) if float_id.isdigit() else float_id,
+                    "timestamp": timestamp,
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "pressure": pressure,
+                    "temperature": temperature,
+                    "salinity": salinity,
+                    "dissolved_oxygen": dissolved_oxygen,
+                    "chlorophyll": chlorophyll,
+                })
+        
+        df = pd.DataFrame(records)
+        
+        if not df.empty:
+            # Convert timestamp to datetime
+            df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+            
+            # Convert numeric columns
+            numeric_cols = ["latitude", "longitude", "pressure", "temperature", 
+                          "salinity", "dissolved_oxygen", "chlorophyll"]
+            for col in numeric_cols:
+                if col in df.columns:
+                    df[col] = pd.to_numeric(df[col], errors="coerce")
+            
+            # Remove duplicates
+            df = df.drop_duplicates(
+                subset=["float_id", "timestamp", "pressure"], 
+                keep="last"
+            )
+            df = df.sort_values("timestamp").reset_index(drop=True)
+        
+        log(f"📊 Processed {len(df)} measurement records")
+        return df
+        
+    except requests.exceptions.Timeout:
+        raise RuntimeError(f"Argovis API timed out after {REQUEST_TIMEOUT}s")
+    except requests.exceptions.RequestException as e:
+        raise RuntimeError(f"Argovis API request failed: {e}")
+    except Exception as e:
+        raise RuntimeError(f"Error processing Argovis data: {e}")
+
+
+# Legacy function for compatibility
+def fetch_netcdf_dataset(start: datetime, end: datetime, progress_callback=None):
+    """Legacy wrapper - now uses Argovis API instead of NetCDF.
+    
+    Returns a simple object with the dataframe accessible for transformation.
+    """
+    df = fetch_argo_data(start, end, progress_callback)
+    
+    # Create a simple wrapper object that mimics xarray.Dataset behavior
+    class DataWrapper:
+        def __init__(self, dataframe: pd.DataFrame):
+            self._df = dataframe
+            self.attrs = {}
+        
+        def to_dataframe(self):
+            return self._df.copy()
+        
+        def close(self):
+            pass
+    
+    return DataWrapper(df)
