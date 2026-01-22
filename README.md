@@ -33,6 +33,25 @@ The demo includes 1.5M+ records covering global oceans from 2020-2026.
 
 ---
 
+## Cloud vs Local
+
+| | Cloud Demo | Run Locally |
+|---|:---:|:---:|
+| **Setup required** | None | 10-15 min |
+| **Data** | Static snapshot (2020-2026) | Fetch anytime from ERDDAP |
+| **Update data** | ❌ | ✅ |
+| **Custom regions** | ❌ | ✅ Any ocean region |
+| **Database limit** | 500MB (Supabase free) | Unlimited |
+| **Best for** | Quick exploration | Research, custom data |
+
+**Why run locally?**
+- Fetch real-time ARGO data from any ocean region
+- No storage limits — load millions of records
+- Update data anytime using the GUI or CLI tools
+- Full control over your database
+
+---
+
 ## Features
 
 - **Natural language queries** — Ask questions in plain English
@@ -54,12 +73,27 @@ Just visit [argofloat-chart.onrender.com](https://argofloat-chart.onrender.com) 
 
 ### Option 2: Run Locally
 
-**Prerequisites:** Python 3.10+, PostgreSQL
+**Prerequisites:** Python 3.10+, PostgreSQL 14+
+
+#### Step 1: Clone and setup
 
 ```bash
 # Clone the repo
 git clone https://github.com/Anbu-2006/ARGOFLOAT-CHART.git
-cd ARGOFLOAT-CHART/ARGO_CHATBOT
+cd ARGOFLOAT-CHART
+```
+
+#### Step 2: Create PostgreSQL database
+
+```sql
+-- In psql or pgAdmin
+CREATE DATABASE argo_db;
+```
+
+#### Step 3: Setup environment
+
+```bash
+cd ARGO_CHATBOT
 
 # Create virtual environment
 python -m venv venv
@@ -69,15 +103,83 @@ venv\Scripts\activate  # Windows
 # Install dependencies
 pip install -r requirements.txt
 
-# Set up environment variables (see .env.example)
+# Copy environment template
 cp .env.example .env
-# Edit .env with your database URL and API keys
+```
 
-# Run the app
+Edit `.env` with your settings:
+```env
+DATABASE_URL=postgresql://postgres:yourpassword@localhost:5432/argo_db
+GROQ_API_KEY=your_groq_api_key  # Free at groq.com
+```
+
+#### Step 4: Initialize database and fetch data
+
+```bash
+cd ../DATA_GENERATOR
+pip install -r requirements.txt
+
+# Setup database tables
+python setup_local_db.py
+
+# Fetch ARGO data (choose one):
+python fetch_argo_data.py --region "Bay of Bengal" --days 30
+# OR use the GUI:
+python gui.py
+```
+
+#### Step 5: Run the web app
+
+```bash
+cd ../ARGO_CHATBOT
 python app.py
 ```
 
 Open [localhost:5000](http://localhost:5000) in your browser.
+
+---
+
+## Fetching Data (Local Only)
+
+The `DATA_GENERATOR` folder contains tools to fetch real ARGO data from NOAA's ERDDAP server.
+
+### Using the GUI
+
+```bash
+cd DATA_GENERATOR
+python gui.py
+```
+
+A desktop window opens where you can:
+- Select ocean regions (Bay of Bengal, Arabian Sea, etc.)
+- Choose date ranges
+- Preview and download data
+- Automatically load into your database
+
+### Using the CLI
+
+```bash
+# Fetch from a specific region
+python fetch_argo_data.py --region "Arabian Sea" --days 60
+
+# Fetch from multiple regions
+python fetch_argo_data.py --regions "Bay of Bengal" "Arabian Sea" --days 30
+
+# Fetch all available regions
+python fetch_argo_data.py --all-regions --days 7
+```
+
+### Supported Regions
+
+| Region | Coverage |
+|--------|----------|
+| Bay of Bengal | 5-22°N, 80-95°E |
+| Arabian Sea | 5-25°N, 50-75°E |
+| Indian Ocean | 40°S-25°N, 30-120°E |
+| Pacific Ocean | 60°S-60°N, 100-180°E |
+| Atlantic Ocean | 60°S-60°N, 80°W-0° |
+| Mediterranean Sea | 30-46°N, 6°W-36°E |
+| Caribbean Sea | 10-22°N, 88-60°W |
 
 ---
 
