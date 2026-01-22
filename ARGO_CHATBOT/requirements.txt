@@ -15,10 +15,13 @@ pandas
 numpy
 openpyxl
 
-# AI/LLM Integration
-langchain-google-genai
-langchain-groq
+# AI/LLM Integration - Multi-Provider Support
+# Priority: OpenAI > Anthropic > Groq > Gemini
 langchain-core
+langchain-openai       # GPT-4o - Best quality
+langchain-anthropic    # Claude 3.5 - Excellent reasoning
+langchain-groq         # Llama 3.3 - Fast & free tier
+langchain-google-genai # Gemini 2.0 - Good fallback
 
 # Environment & Utilities
 python-dotenv

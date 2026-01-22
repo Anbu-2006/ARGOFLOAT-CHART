@@ -1,388 +1,247 @@
-# 🌊 FloatChart – AI-Powered Ocean Intelligence Platform
+# 🌊 FloatChart
 
 <div align="center">
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge&logo=python)
-![Flask](https://img.shields.io/badge/Flask-3.0-green?style=for-the-badge&logo=flask)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-blue?style=for-the-badge&logo=postgresql)
-![LangChain](https://img.shields.io/badge/LangChain-AI-orange?style=for-the-badge)
-![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-3.x-000000?style=flat-square&logo=flask)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 
-**An AI-powered web application for querying and visualizing ARGO float oceanographic data using natural language.**
+**Query ocean data using plain English.**
 
-[🌐 Live Demo](https://argofloat-chart.onrender.com) • [💻 Local Setup](#-local-setup-full-features) • [📖 Documentation](#-features)
+[Live Demo](https://argofloat-chart.onrender.com) · [Report Bug](https://github.com/Anbu-2006/ARGOFLOAT-CHART/issues) · [Request Feature](https://github.com/Anbu-2006/ARGOFLOAT-CHART/issues)
 
 </div>
 
 ---
 
-## 📋 Table of Contents
+## About
 
-- [Overview](#-overview)
-- [Deployment Modes](#-deployment-modes)
-- [Features](#-features)
-- [Live Demo](#-live-demo)
-- [Local Setup](#-local-setup-full-features)
-- [Project Structure](#-project-structure)
-- [Sample Queries](#-sample-queries)
-- [API Reference](#-api-reference)
-- [Limitations](#-limitations)
-- [Contributing](#-contributing)
-- [License](#-license)
+FloatChart lets you explore ARGO float oceanographic data through natural language queries. Instead of writing complex SQL, just ask questions like *"What's the average temperature in the Bay of Bengal?"* and get instant visualizations.
+
+**What are ARGO floats?** They're autonomous instruments drifting across the world's oceans, diving to 2000m depth to measure temperature, salinity, and pressure. Over 4,000 are currently deployed, generating millions of data points for climate research.
 
 ---
 
-## 🌐 Overview
+## Demo
 
-**FloatChart** is an intelligent oceanographic data platform that allows users to query ARGO float data using natural language. The system leverages AI (LLM) to interpret user questions, generate SQL queries, and present results through interactive visualizations.
+**→ [argofloat-chart.onrender.com](https://argofloat-chart.onrender.com)**
 
-### What are ARGO Floats?
-ARGO floats are autonomous profiling instruments that drift with ocean currents, diving to depths of 2000m and measuring temperature, salinity, and pressure. Over 4,000 floats are currently deployed worldwide, providing critical data for climate research and oceanography.
+The demo includes 1.5M+ records covering global oceans from 2020-2026.
 
----
-
-## 🔄 Deployment Modes
-
-FloatChart supports **two deployment modes** to suit different use cases:
-
-### 🌐 Cloud Deployment (Recommended for Quick Access)
-- **Database:** Supabase PostgreSQL (cloud-hosted)
-- **Hosting:** Render.com
-- **Data:** Pre-loaded 1.5M+ records (Jan 2020 - Jun 2026)
-- **Best for:** Quick exploration, demos, sharing with others
-
-### 💻 Local Development (Full Features)
-- **Database:** Local PostgreSQL
-- **Hosting:** Local Flask server
-- **Data:** Fetch real-time data from ERDDAP
-- **Best for:** Research, custom data, full control
-
-| Feature | 🌐 Cloud Demo | 💻 Local Setup |
-|---------|--------------|----------------|
-| Database | Supabase (500MB limit) | Local PostgreSQL (unlimited) |
-| Records | 1.5M (static) | Unlimited (fetch anytime) |
-| Data Source | Pre-loaded | Real-time ERDDAP |
-| Update Data | ❌ Not possible | ✅ Anytime via CLI/GUI |
-| Custom Regions | ❌ Fixed dataset | ✅ Any ocean region |
-| Historical Data | Jan 2020 - Jun 2026 | Any available dates |
-| Setup Time | Instant (just visit) | 10-15 minutes |
+> **Note:** The demo runs on Render's free tier, so there may be a ~30s cold start delay if the server has been idle.
 
 ---
 
-## ✨ Features
+## Features
 
-| Feature | Description | Cloud | Local |
-|---------|-------------|:-----:|:-----:|
-| 💬 **Natural Language Queries** | Ask questions in plain English | ✅ | ✅ |
-| 🗺️ **Interactive Map Explorer** | Click anywhere to find floats | ✅ | ✅ |
-| 📊 **Dynamic Visualizations** | Multiple chart types | ✅ | ✅ |
-| 📈 **Float Trajectories** | Track float movement | ✅ | ✅ |
-| 🔍 **Proximity Search** | Find floats near cities | ✅ | ✅ |
-| ⬇️ **CSV Export** | Download data | ✅ | ✅ |
-| 🔄 **Data Updates** | Fetch new ARGO data | ❌ | ✅ |
-| 🗄️ **Custom Database** | Use your own PostgreSQL | ❌ | ✅ |
-| 📡 **ERDDAP Integration** | Real-time data fetch | ❌ | ✅ |
-| 🖥️ **Desktop GUI** | Tkinter data manager | ❌ | ✅ |
+- **Natural language queries** — Ask questions in plain English
+- **Interactive maps** — Visualize float positions and trajectories
+- **Multiple chart types** — Time series, scatter plots, depth profiles
+- **Voice input** — Speak your queries (Chrome/Edge)
+- **Dark/Light themes** — Easy on the eyes
+- **Keyboard shortcuts** — Press `?` to see all shortcuts
+- **Export data** — Download as CSV or JSON
+- **Works offline** — Installable as a PWA
 
 ---
 
-## 🌐 Live Demo
+## Quick Start
 
-**🔗 [https://argofloat-chart.onrender.com](https://argofloat-chart.onrender.com)**
+### Option 1: Use the Demo
 
-### Database Statistics
-| Metric | Value |
-|--------|-------|
-| **Total Records** | 1,513,324+ |
-| **Date Range** | January 2020 - June 2026 |
-| **Coverage** | Global (Pacific, Atlantic, Indian, Mediterranean, Caribbean) |
-| **Metrics** | Temperature, Salinity, Pressure, Dissolved Oxygen |
+Just visit [argofloat-chart.onrender.com](https://argofloat-chart.onrender.com) — no setup needed.
 
-### ⚠️ Demo Limitations
-- Data is **static** (cannot add new records)
-- Supabase free tier (500MB storage limit)
-- Cold start delay (~30s if inactive)
-- Rate limited API calls
+### Option 2: Run Locally
 
----
-
-## 💻 Local Setup (Full Features)
-
-### Prerequisites
-- Python 3.10+
-- PostgreSQL 14+ (local installation)
-- Git
-
-### Step 1: Clone Repository
+**Prerequisites:** Python 3.10+, PostgreSQL
 
 ```bash
+# Clone the repo
 git clone https://github.com/Anbu-2006/ARGOFLOAT-CHART.git
-cd ARGOFLOAT-CHART
-```
+cd ARGOFLOAT-CHART/ARGO_CHATBOT
 
-### Step 2: Set Up PostgreSQL Database
+# Create virtual environment
+python -m venv venv
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # Mac/Linux
 
-```sql
--- Connect to PostgreSQL and create database
-CREATE DATABASE argo_chatbot;
-```
-
-### Step 3: Configure Environment
-
-Create `.env` file in `ARGO_CHATBOT/` folder:
-
-```env
-# Local PostgreSQL
-DATABASE_URL=postgresql://postgres:your_password@localhost:5432/argo_chatbot
-
-# LLM Provider (at least one required)
-GROQ_API_KEY=your_groq_api_key
-# OR
-GOOGLE_API_KEY=your_google_api_key
-```
-
-### Step 4: Install Dependencies
-
-```bash
-# Web Application
-cd ARGO_CHATBOT
-python -m venv .venv
-.venv\Scripts\activate  # Windows
-# source .venv/bin/activate  # macOS/Linux
+# Install dependencies
 pip install -r requirements.txt
 
-# Data Generator (optional, for fetching data)
-cd ../DATA_GENERATOR
-pip install -r requirements.txt
-```
+# Set up environment variables (see .env.example)
+cp .env.example .env
+# Edit .env with your database URL and API keys
 
-### Step 5: Initialize Database
-
-```bash
-cd DATA_GENERATOR
-python setup_local_db.py
-```
-
-### Step 6: Fetch ARGO Data
-
-```bash
-# Fetch data from a specific region
-python fetch_argo_data.py --region "Bay of Bengal" --days 30
-
-# Or fetch from multiple regions
-python fetch_argo_data.py --all-regions --days 7
-
-# Or use the GUI
-python gui.py
-```
-
-### Step 7: Run Web Application
-
-```bash
-cd ../ARGO_CHATBOT
+# Run the app
 python app.py
 ```
 
-Open browser: **http://localhost:5000**
+Open [localhost:5000](http://localhost:5000) in your browser.
 
 ---
 
-## 📁 Project Structure
+## Configuration
+
+Create a `.env` file in the `ARGO_CHATBOT` folder:
+
+```env
+# Database (required)
+DATABASE_URL=postgresql://user:password@localhost:5432/argo_db
+
+# AI Provider (at least one required)
+GROQ_API_KEY=your_key_here
+# or
+OPENAI_API_KEY=your_key_here
+# or
+GOOGLE_API_KEY=your_key_here
+```
+
+The app supports multiple LLM providers and will automatically use whichever key you provide.
+
+---
+
+## Project Structure
 
 ```
 ARGOFLOAT-CHART/
+├── ARGO_CHATBOT/           # Web application
+│   ├── app.py              # Flask server
+│   ├── brain.py            # AI query processing
+│   ├── sql_builder.py      # SQL generation
+│   ├── requirements.txt
+│   └── static/             # Frontend assets
+│       ├── index.html
+│       ├── css/
+│       └── js/
 │
-├── 📂 ARGO_CHATBOT/              # 🌐 Web Application
-│   ├── app.py                    # Flask server & API routes
-│   ├── brain.py                  # AI/NLP with LangChain
-│   ├── sql_builder.py            # Dynamic SQL generation
-│   ├── database_utils.py         # Database utilities
-│   ├── requirements.txt          # Python dependencies
-│   ├── Procfile                  # Render deployment
-│   ├── .env.example              # Environment template
-│   │
-│   └── 📂 static/                # Frontend
-│       ├── index.html            # Chat interface
-│       ├── map.html              # Interactive map
-│       ├── 📂 css/styles.css     # Styles
-│       └── 📂 js/app.js          # JavaScript
-│
-├── 📂 DATA_GENERATOR/            # 💻 Local Data Tools
-│   ├── gui.py                    # Desktop GUI (Tkinter)
-│   ├── fetch_argo_data.py        # CLI data fetcher
-│   ├── setup_local_db.py         # Database setup script
-│   ├── config.py                 # Configuration
-│   ├── env_utils.py              # Environment utilities
-│   ├── update_manager.py         # Data sync manager
-│   └── requirements.txt          # Dependencies
-│
-├── README.md                     # This documentation
-├── LICENSE                       # MIT License
-└── .gitignore                    # Git ignore rules
+└── DATA_GENERATOR/         # Tools for fetching ARGO data
+    ├── gui.py              # Desktop GUI
+    ├── fetch_argo_data.py  # CLI tool
+    └── setup_local_db.py   # Database setup
 ```
 
 ---
 
-## 💬 Sample Queries
+## Sample Queries
 
-### 📍 Location-Based
-```
-• "Find 5 nearest floats to Chennai"
-• "Show floats in Bay of Bengal"
-• "Floats near Kollam"
-• "Data from Arabian Sea"
-```
+Try these in the app:
 
-### 🌡️ Data Analysis
-```
-• "Average temperature in Indian Ocean"
-• "Maximum salinity in Pacific"
-• "Temperature trends in 2024"
-```
-
-### 🔢 Specific Float
-```
-• "Show data for float 2902115"
-• "Trajectory of float 5907083"
-```
-
-### Supported Locations
-
-| Category | Locations |
-|----------|-----------|
-| **Indian Ocean** | Arabian Sea, Bay of Bengal, Andaman Sea, Laccadive Sea |
-| **Pacific Ocean** | South China Sea, Philippine Sea, Coral Sea, Tasman Sea |
-| **Atlantic Ocean** | Caribbean Sea, Gulf of Mexico, Mediterranean Sea |
-| **Indian Cities** | Chennai, Mumbai, Kollam, Kochi, Goa, Kolkata, Vizag, Mangalore, Trivandrum, Pondicherry, Port Blair |
-| **International** | Singapore, Tokyo, Sydney, Cape Town, Miami, Maldives, Mauritius |
+| Type | Example |
+|------|---------|
+| **Location** | "Show floats near Chennai" |
+| **Statistics** | "Average temperature in Arabian Sea" |
+| **Time-based** | "Temperature trends in 2024" |
+| **Specific float** | "Trajectory of float 2902115" |
+| **Comparison** | "Salinity vs temperature in Bay of Bengal" |
 
 ---
 
-## 📡 API Reference
+## API
 
-### Base URL
-- **Cloud:** `https://argofloat-chart.onrender.com/api`
-- **Local:** `http://localhost:5000/api`
+The app exposes a simple REST API:
 
-### Endpoints
-
-#### `GET /api/status`
-```json
-{
-  "status": "online",
-  "database": "connected",
-  "records": 1513324
-}
+```
+GET  /api/status          # Health check
+POST /api/query           # Natural language query
+GET  /api/nearest_floats  # Find floats near coordinates
+GET  /api/float_trajectory/<id>  # Get float path
 ```
 
-#### `POST /api/query`
-```json
-// Request
-{ "query": "Find 5 nearest floats to Chennai" }
-
-// Response
-{
-  "success": true,
-  "query_type": "Proximity",
-  "data": [...],
-  "summary": "Found 5 floats..."
-}
+Example:
+```bash
+curl -X POST https://argofloat-chart.onrender.com/api/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "average temperature in indian ocean"}'
 ```
 
 ---
 
-## 🚫 Limitations
+## Keyboard Shortcuts
 
-### Cloud Deployment Limitations
-
-| Limitation | Details |
-|------------|---------|
-| **Static Data** | Cannot add new records (Supabase read-only in production) |
-| **Storage Cap** | 500MB Supabase free tier (~1.5M records max) |
-| **Cold Start** | ~30 second delay if server is idle |
-| **Rate Limits** | API throttling on heavy use |
-| **Date Range** | Fixed: Jan 2020 - Jun 2026 |
-
-### Local Deployment Limitations
-
-| Limitation | Details |
-|------------|---------|
-| **Setup Required** | Need PostgreSQL + Python environment |
-| **ERDDAP Dependency** | Data fetch depends on ERDDAP availability |
-| **Local Only** | Not accessible from internet (without tunneling) |
-
-### Data Quality Notes
-
-- Some float markers may appear on coastlines due to GPS accuracy (~10-50m error)
-- ARGO floats operate in open ocean; coastal proximity is for reference only
-- Temperature/salinity values are real measurements from ARGO program
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl + Enter` | Send query |
+| `Ctrl + K` | Command palette |
+| `Ctrl + D` | Toggle theme |
+| `Ctrl + E` | Export data |
+| `?` | Show all shortcuts |
 
 ---
 
-## 🛠️ Tech Stack
+## Deployment
 
-### Backend
-| Technology | Purpose |
-|------------|---------|
-| Python 3.10+ | Core language |
-| Flask 3.0 | Web framework |
-| LangChain | AI orchestration |
-| Groq / Gemini | LLM providers |
-| SQLAlchemy | Database ORM |
-| PostgreSQL | Database |
+### Render (Recommended)
 
-### Frontend
-| Technology | Purpose |
-|------------|---------|
-| HTML5/CSS3 | Structure & styling |
-| JavaScript | Interactivity |
-| Leaflet.js | Maps |
-| Chart.js | Visualizations |
+1. Fork this repo
+2. Create a new Web Service on [Render](https://render.com)
+3. Connect your GitHub repo
+4. Set environment variables in Render dashboard
+5. Deploy
 
-### Data Sources
-| Source | Purpose |
-|--------|---------|
-| ERDDAP | Real-time ARGO data |
-| Supabase | Cloud PostgreSQL |
+The included `Procfile` handles the rest.
+
+### Other Platforms
+
+Works with any platform that supports Python/Flask:
+- Heroku
+- Railway
+- DigitalOcean App Platform
+- Your own VPS
 
 ---
 
-## 🤝 Contributing
+## Tech Stack
 
-1. **Fork** the repository
-2. **Create** feature branch (`git checkout -b feature/amazing`)
-3. **Commit** changes (`git commit -m 'Add feature'`)
-4. **Push** to branch (`git push origin feature/amazing`)
-5. **Open** Pull Request
-
----
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file.
+| Layer | Technology |
+|-------|------------|
+| Backend | Python, Flask, SQLAlchemy |
+| AI | LangChain + Groq/OpenAI/Gemini |
+| Database | PostgreSQL (Supabase for cloud) |
+| Frontend | Vanilla JS, Leaflet.js, Chart.js |
+| Data Source | NOAA ERDDAP |
 
 ---
 
-## 🙏 Acknowledgments
+## Known Limitations
 
-- **[ARGO Program](https://argo.ucsd.edu/)** - Global ocean observation
-- **[ERDDAP](https://coastwatch.pfeg.noaa.gov/erddap/)** - Data distribution
-- **[Groq](https://groq.com/)** - Fast LLM inference
-- **[Supabase](https://supabase.com/)** - Cloud PostgreSQL
-- **[Render](https://render.com/)** - Deployment platform
+- **Demo data is static** — The live demo uses a snapshot of ARGO data
+- **GPS accuracy** — Some float markers may appear near coastlines due to ~10-50m GPS error
+- **Cold starts** — Free tier hosting has idle timeouts
+
+For real-time data updates, run locally with the DATA_GENERATOR tools.
+
+---
+
+## Contributing
+
+Contributions welcome! Feel free to:
+
+1. Fork the repo
+2. Create a feature branch
+3. Make your changes
+4. Open a pull request
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE) for details.
+
+---
+
+## Acknowledgments
+
+- [ARGO Program](https://argo.ucsd.edu/) for the ocean observation network
+- [ERDDAP](https://coastwatch.pfeg.noaa.gov/erddap/) for data access
+- [Groq](https://groq.com/) for fast LLM inference
 
 ---
 
 <div align="center">
 
-### 🌊 Made with ❤️ for Ocean Research
+Built by [@Anbu-2006](https://github.com/Anbu-2006)
 
-**⭐ Star this repo if you find it helpful!**
-
-| | |
-|---|---|
-| **Developer** | Anbu |
-| **GitHub** | [@Anbu-2006](https://github.com/Anbu-2006) |
-| **Live Demo** | [argofloat-chart.onrender.com](https://argofloat-chart.onrender.com) |
+If this helped you, consider giving it a ⭐
 
 </div>

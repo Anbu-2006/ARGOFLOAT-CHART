@@ -1,16 +1,37 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FloatChart - Ocean Intelligence</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Query and visualize ARGO ocean float data using natural language">
+    <meta name="keywords" content="ocean data, ARGO floats, oceanography, sea temperature, salinity, marine science">
+    <meta name="author" content="Anbu">
+    <meta name="theme-color" content="#050810">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FloatChart">
+    <link rel="apple-touch-icon" href="/static/icons/icon.svg">
+    <link rel="manifest" href="/static/manifest.json">
+    
+    <title>FloatChart</title>
+    
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="/static/css/styles.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌊</text></svg>">
 </head>
 <body>
     <div class="app-container">
@@ -24,21 +45,31 @@
                 <div class="map-overlay-controls">
                     <div class="map-info-badge" id="mapInfoBadge">
                         <span class="badge-icon">🌊</span>
-                        <span class="badge-text">Indian Ocean Region</span>
+                        <span class="badge-text">Global Ocean Coverage</span>
                     </div>
-                    <!-- Interactive Map Button - Opens separate page -->
+                    
+                    <!-- Interactive Map Button -->
                     <a href="/map" class="map-explorer-btn" id="mapExplorerBtn" title="Open Interactive Map Explorer">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                         </svg>
                         <span>Interactive Map</span>
                     </a>
+                    
+                    <!-- Dashboard Button -->
+                    <a href="/dashboard" class="dashboard-btn" id="dashboardBtn" title="View Analytics Dashboard">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                        <span>Dashboard</span>
+                    </a>
                 </div>
                 
                 <!-- Map Legend -->
                 <div class="map-legend" id="mapLegend">
-                    <div class="legend-item"><span class="legend-dot float"></span>Float</div>
-                    <div class="legend-item"><span class="legend-line"></span>Path</div>
+                    <div class="legend-item"><span class="legend-dot float"></span>Float Position</div>
+                    <div class="legend-item"><span class="legend-line"></span>Trajectory</div>
                 </div>
                 
                 <!-- Fullscreen Button -->
@@ -81,11 +112,20 @@
                         </button>
                     </div>
                     <div class="results-actions">
+                        <!-- Share Button -->
+                        <button class="action-btn share-btn" id="shareBtn" title="Share Results">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                            </svg>
+                        </button>
+                        <!-- Export Button -->
                         <button class="action-btn" id="exportBtn" title="Export CSV">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4m4-5l5 5 5-5m-5 5V3"/>
                             </svg>
                         </button>
+                        <!-- Close Button -->
                         <button class="action-btn close-btn" id="closeResults" title="Close">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M18 6L6 18M6 6l12 12"/>
@@ -116,7 +156,7 @@
                 
                 <div class="tab-content" id="chartTab">
                     <div class="chart-controls">
-                        <label>Chart Type:</label>
+                        <label>Type:</label>
                         <select id="chartTypeSelect" class="chart-select">
                             <option value="auto">Auto (Best fit)</option>
                             <option value="profile">Depth Profile</option>
@@ -125,11 +165,11 @@
                             <option value="histogram">Histogram</option>
                             <option value="ts-diagram">T-S Diagram</option>
                         </select>
-                        <label>X Axis:</label>
+                        <label>X:</label>
                         <select id="chartXAxis" class="chart-select">
                             <option value="auto">Auto</option>
                         </select>
-                        <label>Y Axis:</label>
+                        <label>Y:</label>
                         <select id="chartYAxis" class="chart-select">
                             <option value="auto">Auto</option>
                         </select>
@@ -164,26 +204,46 @@
                         <span class="brand-tagline">Ocean Intelligence</span>
                     </div>
                 </div>
-                <button class="collapse-btn" id="panelToggle" title="Collapse">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 18l6-6-6-6"/>
-                    </svg>
-                </button>
+                <div class="header-actions">
+                    <!-- Theme Toggle -->
+                    <button class="theme-toggle" id="themeToggle" title="Toggle Theme">
+                        <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/>
+                            <line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/>
+                            <line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                        </svg>
+                        <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </svg>
+                    </button>
+                    <!-- Collapse Button -->
+                    <button class="collapse-btn" id="panelToggle" title="Collapse">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 18l6-6-6-6"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
             
-            <!-- Quick Actions -->
+            <!-- Quick Actions / Smart Suggestions -->
             <div class="quick-actions">
                 <button class="quick-btn" data-query="Find the 5 nearest floats to Chennai">
-                    <span class="quick-icon">📍</span>Floats near Chennai
+                    <span class="quick-icon">📍</span>
+                    <span>Floats near Chennai</span>
                 </button>
-                <button class="quick-btn" data-query="What is the average temperature in the Pacific Ocean in 2024?">
-                    <span class="quick-icon">🌡️</span>Pacific Ocean 2024 temp
+                <button class="quick-btn" data-query="What is the average temperature in the Bay of Bengal in 2024?">
+                    <span class="quick-icon">🌡️</span>
+                    <span>Bay of Bengal temp</span>
                 </button>
                 <button class="quick-btn" data-query="Show floats in Mediterranean Sea from 2023">
-                    <span class="quick-icon">🌊</span>Mediterranean 2023
+                    <span class="quick-icon">🌊</span>
+                    <span>Mediterranean 2023</span>
                 </button>
                 <button class="quick-btn" data-query="Average salinity in Caribbean Sea">
-                    <span class="quick-icon">🧪</span>Caribbean salinity
+                    <span class="quick-icon">🧪</span>
+                    <span>Caribbean salinity</span>
                 </button>
             </div>
             
@@ -191,9 +251,11 @@
             <div class="chat-messages" id="chatMessages">
                 <div class="welcome-msg">
                     <div class="welcome-icon">🌊</div>
-                    <h3>Welcome to FloatChart!</h3>
-                    <p>Explore <strong>1.5M+</strong> ARGO float measurements from <strong>2020-2026</strong> across Pacific, Atlantic, Indian, Mediterranean, Caribbean, Southern Ocean, and more.</p>
-                    <div class="data-range-info" id="dataRangeInfo"></div>
+                    <h3>Welcome to FloatChart Pro!</h3>
+                    <p>Explore millions of ARGO float measurements from <strong>global oceans</strong> including Pacific, Atlantic, Indian, Mediterranean, Caribbean, and Southern Ocean.</p>
+                    <div class="data-range-info" id="dataRangeInfo">
+                        <!-- Data range will be populated dynamically -->
+                    </div>
                 </div>
             </div>
             
@@ -203,11 +265,11 @@
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                     </svg>
-                    Recent
+                    Recent Queries
                     <span class="history-count" id="historyCount">0</span>
                 </button>
                 <div class="history-list hidden" id="historyList"></div>
-                <button class="clear-history-btn hidden" id="clearHistory" title="Clear">
+                <button class="clear-history-btn hidden" id="clearHistory" title="Clear History">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
                     </svg>
@@ -216,8 +278,60 @@
             
             <!-- Input Area -->
             <div class="chat-input">
+                <!-- Smart Suggestions Dropdown -->
+                <div class="suggestions-dropdown" id="suggestionsDropdown">
+                    <div class="suggestion-category">📊 Statistics</div>
+                    <div class="suggestion-item" data-query="What is the average temperature in the Indian Ocean?">
+                        <div class="suggestion-icon">🌡️</div>
+                        <div class="suggestion-text">
+                            <div class="suggestion-title">Average temperature</div>
+                            <div class="suggestion-desc">Get mean ocean temperature for a region</div>
+                        </div>
+                    </div>
+                    <div class="suggestion-item" data-query="How many floats are in the Pacific Ocean?">
+                        <div class="suggestion-icon">📈</div>
+                        <div class="suggestion-text">
+                            <div class="suggestion-title">Count floats</div>
+                            <div class="suggestion-desc">Count ARGO floats in a specific region</div>
+                        </div>
+                    </div>
+                    <div class="suggestion-category">📍 Location Based</div>
+                    <div class="suggestion-item" data-query="Find floats near Mumbai">
+                        <div class="suggestion-icon">📍</div>
+                        <div class="suggestion-text">
+                            <div class="suggestion-title">Floats near a city</div>
+                            <div class="suggestion-desc">Find nearest floats to any coastal city</div>
+                        </div>
+                    </div>
+                    <div class="suggestion-item" data-query="Show all floats in the Arabian Sea">
+                        <div class="suggestion-icon">🗺️</div>
+                        <div class="suggestion-text">
+                            <div class="suggestion-title">Regional floats</div>
+                            <div class="suggestion-desc">View all floats in a specific sea/ocean</div>
+                        </div>
+                    </div>
+                    <div class="suggestion-category">🛤️ Trajectories</div>
+                    <div class="suggestion-item" data-query="Show trajectory for float 2903000">
+                        <div class="suggestion-icon">🛤️</div>
+                        <div class="suggestion-text">
+                            <div class="suggestion-title">Float trajectory</div>
+                            <div class="suggestion-desc">Track a specific float's path over time</div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="input-container">
-                    <textarea id="queryInput" placeholder="Ask about ocean data..." rows="1"></textarea>
+                    <textarea id="queryInput" placeholder="Ask about ocean data... (try 'average temp in Pacific')" rows="1"></textarea>
+                    <!-- Voice Input Button -->
+                    <button class="voice-btn" id="voiceBtn" title="Voice Input">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                            <line x1="12" y1="19" x2="12" y2="23"/>
+                            <line x1="8" y1="23" x2="16" y2="23"/>
+                        </svg>
+                    </button>
+                    <!-- Send Button -->
                     <button class="send-btn" id="sendBtn">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
@@ -229,6 +343,7 @@
                         <span class="status-dot"></span>
                         <span class="status-text">Connecting...</span>
                     </span>
+                    <span class="model-badge" id="modelBadge">AI Powered</span>
                 </div>
             </div>
         </aside>
@@ -237,16 +352,192 @@
     <!-- Loading Overlay -->
     <div class="loading-overlay hidden" id="loadingOverlay">
         <div class="loader">
-            <div class="loader-wave"></div>
-            <div class="loader-wave"></div>
-            <div class="loader-wave"></div>
-            <p>Analyzing ocean data...</p>
+            <div class="loader-ocean">
+                <div class="loader-wave"></div>
+                <div class="loader-wave"></div>
+                <div class="loader-wave"></div>
+            </div>
+            <p id="loaderText">Analyzing ocean data...</p>
+            <p class="loader-subtext" id="loaderSubtext">Processing your query</p>
         </div>
     </div>
     
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
     
+    <!-- Share Modal -->
+    <div class="modal-overlay" id="shareModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Share Results</h3>
+                <button class="modal-close" id="closeShareModal">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="share-options">
+                    <div class="share-option" id="shareCopyLink">
+                        <div class="share-option-icon">🔗</div>
+                        <span class="share-option-label">Copy Link</span>
+                    </div>
+                    <div class="share-option" id="shareDownloadPNG">
+                        <div class="share-option-icon">📷</div>
+                        <span class="share-option-label">Download PNG</span>
+                    </div>
+                    <div class="share-option" id="shareExportJSON">
+                        <div class="share-option-icon">📄</div>
+                        <span class="share-option-label">Export JSON</span>
+                    </div>
+                    <div class="share-option" id="shareEmbed">
+                        <div class="share-option-icon">📎</div>
+                        <span class="share-option-label">Embed Code</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- PWA Install Prompt -->
+    <div class="pwa-install-prompt hidden" id="pwaPrompt">
+        <div class="pwa-icon">📱</div>
+        <div class="pwa-content">
+            <h4>Install FloatChart</h4>
+            <p>Add to home screen for quick access</p>
+        </div>
+        <div class="pwa-actions">
+            <button class="pwa-btn primary" id="pwaInstall">Install</button>
+            <button class="pwa-btn secondary" id="pwaDismiss">Later</button>
+        </div>
+    </div>
+    
+    <!-- Command Palette (Ctrl+K) -->
+    <div class="search-overlay hidden" id="commandPaletteOverlay"></div>
+    <div class="command-palette hidden" id="commandPalette">
+        <input type="text" class="command-palette-input" id="commandInput" placeholder="Type a command or search..." autocomplete="off">
+        <div class="command-palette-results" id="commandResults">
+            <!-- Commands will be populated dynamically -->
+        </div>
+    </div>
+    
+    <!-- Keyboard Shortcuts Modal (Ctrl+?) -->
+    <div class="shortcuts-modal hidden" id="shortcutsModal">
+        <div class="shortcuts-content">
+            <div class="shortcuts-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="4" width="20" height="16" rx="2"/>
+                    <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h8M6 16h.01M10 16h.01M14 16h.01M18 16h.01"/>
+                </svg>
+                Keyboard Shortcuts
+            </div>
+            
+            <div class="shortcuts-group">
+                <div class="shortcuts-group-title">Navigation</div>
+                <div class="shortcut-row">
+                    <span class="shortcut-action">Focus input</span>
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd><kbd>/</kbd></div>
+                </div>
+                <div class="shortcut-row">
+                    <span class="shortcut-action">Command palette</span>
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd><kbd>K</kbd></div>
+                </div>
+                <div class="shortcut-row">
+                    <span class="shortcut-action">Toggle suggestions</span>
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd><kbd>Space</kbd></div>
+                </div>
+                <div class="shortcut-row">
+                    <span class="shortcut-action">Close modals/panels</span>
+                    <div class="shortcut-keys"><kbd>Esc</kbd></div>
+                </div>
+            </div>
+            
+            <div class="shortcuts-group">
+                <div class="shortcuts-group-title">Actions</div>
+                <div class="shortcut-row">
+                    <span class="shortcut-action">Send query</span>
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd><kbd>Enter</kbd></div>
+                </div>
+                <div class="shortcut-row">
+                    <span class="shortcut-action">Export data</span>
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd><kbd>E</kbd></div>
+                </div>
+                <div class="shortcut-row">
+                    <span class="shortcut-action">Toggle fullscreen map</span>
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd><kbd>M</kbd></div>
+                </div>
+                <div class="shortcut-row">
+                    <span class="shortcut-action">Open dashboard</span>
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>D</kbd></div>
+                </div>
+            </div>
+            
+            <div class="shortcuts-group">
+                <div class="shortcuts-group-title">Display</div>
+                <div class="shortcut-row">
+                    <span class="shortcut-action">Toggle dark/light theme</span>
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd><kbd>D</kbd></div>
+                </div>
+                <div class="shortcut-row">
+                    <span class="shortcut-action">Show this help</span>
+                    <div class="shortcut-keys"><kbd>?</kbd></div>
+                </div>
+            </div>
+            
+            <button class="action-btn" style="margin-top: 20px; width: 100%;" id="closeShortcutsModal">
+                Got it!
+            </button>
+        </div>
+    </div>
+    
+    <!-- Onboarding Tour Tooltip (First-time users) -->
+    <div class="tour-tooltip hidden" id="tourTooltip">
+        <div class="tour-arrow"></div>
+        <div class="tour-content">
+            <h4 id="tourTitle">Welcome!</h4>
+            <p id="tourText">This is your first time here. Let us show you around!</p>
+        </div>
+        <div class="tour-footer">
+            <span id="tourProgress">1 of 5</span>
+            <div class="tour-buttons">
+                <button class="tour-btn skip" id="tourSkip">Skip</button>
+                <button class="tour-btn next" id="tourNext">Next</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notification Permission Banner -->
+    <div class="notification-banner hidden" id="notificationBanner">
+        <div class="notification-banner-content">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span>Enable notifications for query updates</span>
+        </div>
+        <div class="notification-banner-actions">
+            <button class="notification-btn primary" id="enableNotifications">Enable</button>
+            <button class="notification-btn secondary" id="dismissNotifications">×</button>
+        </div>
+    </div>
+    
+    <!-- Performance Stats (Debug Mode) -->
+    <div class="perf-stats hidden" id="perfStats">
+        <div class="perf-stat">
+            <span class="perf-label">Load:</span>
+            <span class="perf-value" id="perfLoadTime">-</span>
+        </div>
+        <div class="perf-stat">
+            <span class="perf-label">Memory:</span>
+            <span class="perf-value" id="perfMemory">-</span>
+        </div>
+        <div class="perf-stat">
+            <span class="perf-label">FPS:</span>
+            <span class="perf-value" id="perfFPS">-</span>
+        </div>
+    </div>
+    
+    <!-- Main App JavaScript -->
     <script src="/static/js/app.js"></script>
 </body>
 </html>

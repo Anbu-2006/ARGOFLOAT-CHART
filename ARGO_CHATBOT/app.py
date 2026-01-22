@@ -1,15 +1,18 @@
 """
-FloatChat API Server - Web Application Backend
-Serves the web interface and provides REST API endpoints for ocean data queries.
+FloatChart - Flask API server for ocean data queries.
 """
 
 import os
-from flask import Flask, jsonify, request, send_from_directory
+import json
+import time
+from functools import wraps
+from flask import Flask, jsonify, request, send_from_directory, Response, stream_with_context
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 from flask_cors import CORS
 import re
 from database_utils import LOCATIONS
+from datetime import datetime, timedelta
 
 # Import the brain module for intelligent queries
 try:
@@ -29,6 +32,49 @@ STATIC_DIR = os.path.join(BASE_DIR, 'static')
 
 app = Flask(__name__, static_folder=STATIC_DIR)
 CORS(app)  # Enable Cross-Origin Resource Sharing
+
+# =============================================
+# CACHING & RATE LIMITING
+# =============================================
+_cache = {}
+_cache_expiry = {}
+CACHE_TTL = 300  # 5 minutes
+
+def cache_response(key, data, ttl=CACHE_TTL):
+    """Store data in cache with expiry."""
+    _cache[key] = data
+    _cache_expiry[key] = time.time() + ttl
+
+def get_cached(key):
+    """Get cached data if not expired."""
+    if key in _cache:
+        if time.time() < _cache_expiry.get(key, 0):
+            return _cache[key]
+        else:
+            del _cache[key]
+            del _cache_expiry[key]
+    return None
+
+def cached(ttl=CACHE_TTL):
+    """Decorator for caching endpoint responses."""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            cache_key = f"{f.__name__}:{request.full_path}"
+            cached_data = get_cached(cache_key)
+            if cached_data:
+                return jsonify(cached_data)
+            result = f(*args, **kwargs)
+            if isinstance(result, tuple):
+                data, status = result
+            else:
+                data = result
+                status = 200
+            if status == 200:
+                cache_response(cache_key, data.get_json() if hasattr(data, 'get_json') else data, ttl)
+            return result
+        return decorated_function
+    return decorator
 
 # --- DATABASE CONNECTION ---
 _engine = None
@@ -90,6 +136,21 @@ def serve_index():
 def serve_map():
     """Serve the interactive map explorer page."""
     return send_from_directory(STATIC_DIR, 'map.html')
+
+@app.route('/dashboard')
+def serve_dashboard():
+    """Serve the analytics dashboard page."""
+    return send_from_directory(STATIC_DIR, 'dashboard.html')
+
+@app.route('/manifest.json')
+def serve_manifest():
+    """Serve PWA manifest."""
+    return send_from_directory(STATIC_DIR, 'manifest.json')
+
+@app.route('/sw.js')
+def serve_sw():
+    """Serve service worker."""
+    return send_from_directory(STATIC_DIR, 'sw.js')
 
 @app.route('/static/<path:path>')
 def serve_static(path):
@@ -203,6 +264,128 @@ def handle_query():
             "data": [],
             "sql_query": "N/A"
         }), 500
+
+
+@app.route('/api/query/stream')
+def handle_query_stream():
+    """
+    Streaming query endpoint - streams AI response in real-time.
+    Uses Server-Sent Events (SSE) for real-time updates.
+    """
+    question = request.args.get('question', '').strip()
+    
+    if not question:
+        return jsonify({"error": "Missing 'question' parameter"}), 400
+    
+    def generate():
+        try:
+            # Send initial status
+            yield f"data: {json.dumps({'type': 'status', 'message': 'Processing your question...'})}\n\n"
+            
+            # Process the query
+            if get_intelligent_answer:
+                result = get_intelligent_answer(question)
+                
+                # Stream the summary word by word for effect
+                summary = result.get('summary', '')
+                words = summary.split()
+                
+                yield f"data: {json.dumps({'type': 'start', 'query_type': result.get('query_type', 'General')})}\n\n"
+                
+                # Stream words in chunks for smoother experience
+                chunk_size = 3
+                for i in range(0, len(words), chunk_size):
+                    chunk = ' '.join(words[i:i+chunk_size])
+                    yield f"data: {json.dumps({'type': 'chunk', 'content': chunk + ' '})}\n\n"
+                    time.sleep(0.05)  # Small delay for streaming effect
+                
+                # Send the complete data
+                yield f"data: {json.dumps({'type': 'data', 'data': result.get('data', []), 'sql_query': result.get('sql_query', '')})}\n\n"
+                yield f"data: {json.dumps({'type': 'done'})}\n\n"
+            else:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Query processing not available'})}\n\n"
+                
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+    
+    return Response(
+        stream_with_context(generate()),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no'
+        }
+    )
+
+
+@app.route('/api/analytics/summary')
+def get_analytics_summary():
+    """Get comprehensive analytics summary for dashboard."""
+    db = get_db_engine()
+    if not db:
+        return jsonify({"error": "Database connection not available"}), 500
+    
+    try:
+        with db.connect() as connection:
+            # Get comprehensive stats
+            stats_query = text("""
+                SELECT 
+                    COUNT(*) as total_records,
+                    COUNT(DISTINCT "float_id") as unique_floats,
+                    AVG("temperature") as avg_temp,
+                    MIN("temperature") as min_temp,
+                    MAX("temperature") as max_temp,
+                    AVG("salinity") as avg_salinity,
+                    MIN("salinity") as min_salinity,
+                    MAX("salinity") as max_salinity,
+                    MAX("pressure") as max_depth,
+                    MIN("timestamp") as earliest,
+                    MAX("timestamp") as latest
+                FROM argo_data;
+            """)
+            stats = dict(connection.execute(stats_query).mappings().first())
+            
+            # Get monthly distribution
+            monthly_query = text("""
+                SELECT 
+                    EXTRACT(MONTH FROM "timestamp")::INT as month,
+                    COUNT(*) as count
+                FROM argo_data
+                GROUP BY EXTRACT(MONTH FROM "timestamp")
+                ORDER BY month;
+            """)
+            monthly = [dict(r) for r in connection.execute(monthly_query).mappings().all()]
+            
+            # Get regional distribution (simplified)
+            regional_query = text("""
+                SELECT 
+                    CASE 
+                        WHEN "latitude" BETWEEN 5 AND 22 AND "longitude" BETWEEN 80 AND 95 THEN 'Bay of Bengal'
+                        WHEN "latitude" BETWEEN 5 AND 25 AND "longitude" BETWEEN 50 AND 75 THEN 'Arabian Sea'
+                        WHEN "latitude" BETWEEN -40 AND 25 AND "longitude" BETWEEN 30 AND 120 THEN 'Indian Ocean'
+                        ELSE 'Other'
+                    END as region,
+                    COUNT(*) as count
+                FROM argo_data
+                GROUP BY region
+                ORDER BY count DESC;
+            """)
+            regional = [dict(r) for r in connection.execute(regional_query).mappings().all()]
+            
+            # Format timestamps
+            for key in ['earliest', 'latest']:
+                if stats.get(key) and hasattr(stats[key], 'isoformat'):
+                    stats[key] = stats[key].isoformat()
+            
+            return jsonify({
+                "stats": stats,
+                "monthly_distribution": monthly,
+                "regional_distribution": regional
+            })
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/api/locations')

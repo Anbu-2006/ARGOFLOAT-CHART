@@ -9,57 +9,190 @@ from langchain_core.output_parsers import StrOutputParser
 from datetime import datetime
 import numpy as np
 import sql_builder
+import time
 
 # ------------------------------------------------------------------
-# LLM Provider Setup - Supports Groq and Google Gemini
+# LLM Provider Setup - Multi-Provider Support with Smart Fallback
+# Priority: OpenAI GPT-4o > Anthropic Claude > Groq > Google Gemini
 # ------------------------------------------------------------------
 
-def get_llm():
+def get_llm(for_task="general"):
     """
-    Initialize the LLM based on available API keys.
-    Priority: Groq (fast & reliable) > Google Gemini
+    Initialize the best available LLM based on API keys.
+    
+    Args:
+        for_task: "parsing" for intent extraction, "summary" for response generation
+    
+    Priority:
+    1. OpenAI GPT-4o (Best quality, most reliable JSON parsing)
+    2. Anthropic Claude 3.5 Sonnet (Excellent reasoning)
+    3. Groq Llama 3.3 70B (Fast, good quality, free tier)
+    4. Google Gemini 2.0 Flash (Good fallback)
     """
     load_dotenv()
     
-    # Try Groq first (fast and reliable)
+    # 1. Try OpenAI GPT-4o first (Best quality)
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if openai_key:
+        try:
+            from langchain_openai import ChatOpenAI
+            model = os.getenv("OPENAI_MODEL", "gpt-4o")
+            print(f"✓ Using OpenAI model: {model}")
+            return ChatOpenAI(
+                model=model,
+                temperature=0,
+                api_key=openai_key,
+                max_retries=3,
+                request_timeout=30
+            )
+        except ImportError:
+            print("⚠ langchain-openai not installed. Trying next provider...")
+        except Exception as e:
+            print(f"⚠ OpenAI error: {e}. Trying next provider...")
+    
+    # 2. Try Anthropic Claude (Excellent reasoning)
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+    if anthropic_key:
+        try:
+            from langchain_anthropic import ChatAnthropic
+            model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
+            print(f"✓ Using Anthropic model: {model}")
+            return ChatAnthropic(
+                model=model,
+                temperature=0,
+                api_key=anthropic_key,
+                max_retries=3,
+                timeout=30
+            )
+        except ImportError:
+            print("⚠ langchain-anthropic not installed. Trying next provider...")
+        except Exception as e:
+            print(f"⚠ Anthropic error: {e}. Trying next provider...")
+    
+    # 3. Try Groq (Fast and reliable, free tier)
     groq_key = os.getenv("GROQ_API_KEY")
     if groq_key:
         try:
             from langchain_groq import ChatGroq
             model = os.getenv("GROQ_MODEL_NAME", "llama-3.3-70b-versatile")
-            print(f"Using Groq model: {model}")
+            print(f"✓ Using Groq model: {model}")
             return ChatGroq(
                 model=model,
                 temperature=0,
-                api_key=groq_key
+                api_key=groq_key,
+                max_retries=3
             )
         except ImportError:
-            print("Warning: langchain-groq not installed. Trying Gemini...")
+            print("⚠ langchain-groq not installed. Trying Gemini...")
         except Exception as e:
-            print(f"Groq error: {e}. Trying Gemini...")
+            print(f"⚠ Groq error: {e}. Trying Gemini...")
     
-    # Fallback to Google Gemini
+    # 4. Fallback to Google Gemini
     gemini_key = os.getenv("GOOGLE_API_KEY")
     if gemini_key:
         try:
             from langchain_google_genai import ChatGoogleGenerativeAI
             model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
-            print(f"Using Gemini model: {model}")
+            print(f"✓ Using Gemini model: {model}")
             return ChatGoogleGenerativeAI(
                 model=model,
                 google_api_key=gemini_key,
-                temperature=0
+                temperature=0,
+                max_retries=3
             )
         except ImportError:
-            print("Warning: langchain-google-genai not installed.")
+            print("⚠ langchain-google-genai not installed.")
         except Exception as e:
-            print(f"Gemini error: {e}")
+            print(f"⚠ Gemini error: {e}")
     
     raise RuntimeError(
-        "No working LLM found! Please set either:\n"
-        "  - GROQ_API_KEY (for Groq - fast & free)\n"
-        "  - GOOGLE_API_KEY (for Google Gemini)"
+        "No working LLM found! Please set at least one API key:\n"
+        "  - OPENAI_API_KEY (for GPT-4o - Best quality)\n"
+        "  - ANTHROPIC_API_KEY (for Claude - Excellent reasoning)\n"
+        "  - GROQ_API_KEY (for Groq Llama - Fast & free)\n"
+        "  - GOOGLE_API_KEY (for Gemini - Good fallback)"
     )
+
+
+def invoke_with_retry(chain, inputs, max_retries=3, delay=1):
+    """
+    Invoke LLM chain with retry logic for robustness.
+    """
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            return chain.invoke(inputs)
+        except Exception as e:
+            last_error = e
+            print(f"⚠ LLM call failed (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                time.sleep(delay * (attempt + 1))  # Exponential backoff
+    raise last_error
+
+
+def _fallback_intent_parser(question: str) -> dict:
+    """
+    Fallback regex-based intent parser when LLM fails.
+    Extracts basic intent from the question using pattern matching.
+    """
+    question_lower = question.lower()
+    intent = {"query_type": "General", "metrics": ["temperature", "salinity"]}
+    
+    # Detect query type
+    if any(word in question_lower for word in ["average", "avg", "mean", "count", "how many", "maximum", "max", "minimum", "min", "total"]):
+        intent["query_type"] = "Statistic"
+        if "average" in question_lower or "avg" in question_lower or "mean" in question_lower:
+            intent["aggregation"] = "avg"
+        elif "max" in question_lower:
+            intent["aggregation"] = "max"
+        elif "min" in question_lower:
+            intent["aggregation"] = "min"
+        elif "count" in question_lower or "how many" in question_lower:
+            intent["aggregation"] = "count"
+    elif any(word in question_lower for word in ["near", "nearest", "close", "within", "around"]):
+        intent["query_type"] = "Proximity"
+    elif any(word in question_lower for word in ["trajectory", "path", "track", "movement", "traveled"]):
+        intent["query_type"] = "Trajectory"
+    elif any(word in question_lower for word in ["profile", "depth", "vertical"]):
+        intent["query_type"] = "Profile"
+    elif any(word in question_lower for word in ["trend", "over time", "monthly", "yearly", "time series"]):
+        intent["query_type"] = "Time-Series"
+    elif " vs " in question_lower or "versus" in question_lower or "correlation" in question_lower:
+        intent["query_type"] = "Scatter"
+    
+    # Extract float ID
+    float_match = re.search(r'float\s*(?:id)?\s*(\d+)', question_lower)
+    if float_match:
+        intent["float_id"] = int(float_match.group(1))
+    
+    # Extract year
+    year_match = re.search(r'\b(20\d{2})\b', question)
+    if year_match:
+        intent["year"] = int(year_match.group(1))
+    
+    # Extract location
+    location_keywords = ["chennai", "mumbai", "bay of bengal", "arabian sea", "indian ocean", 
+                        "pacific", "atlantic", "mediterranean", "caribbean", "kolkata", "goa"]
+    for loc in location_keywords:
+        if loc in question_lower:
+            intent["location_name"] = loc
+            break
+    
+    # Extract metrics
+    metrics = []
+    if "temperature" in question_lower or "temp" in question_lower:
+        metrics.append("temperature")
+    if "salinity" in question_lower or "salt" in question_lower:
+        metrics.append("salinity")
+    if "oxygen" in question_lower:
+        metrics.append("dissolved_oxygen")
+    if "pressure" in question_lower or "depth" in question_lower:
+        metrics.append("pressure")
+    if metrics:
+        intent["metrics"] = metrics
+    
+    return intent
+
 
 # ------------------------------------------------------------------
 # Global engine caching to avoid recreating engine for each question
@@ -155,82 +288,136 @@ def get_database_context(engine):
     except Exception as e:
         print(f"CRITICAL ERROR: Could not get database context. {e}"); return None
 
-INTENT_PARSER_PROMPT = """
-You are an expert oceanographic data analyst. Parse the user's question into a structured JSON for SQL query generation.
+INTENT_PARSER_PROMPT = """You are an expert oceanographic data analyst AI. Your task is to parse the user's natural language question into a structured JSON object for SQL query generation.
 
-SUPPORTED QUERY TYPES:
-- "Statistic": For averages, max/min, counts (e.g., "average temperature", "how many floats")
-- "Proximity": Finding floats near a location (e.g., "floats near Chennai", "nearest to Bay of Bengal")
-- "Trajectory": Path/movement of a specific float (e.g., "trajectory of float 2902115", "path of float")
-- "Profile": Depth profile data (e.g., "depth profile", "temperature vs pressure")
-- "Time-Series": Data over time (e.g., "temperature trend", "salinity from Jan to March")
-- "Scatter": Comparing two variables (e.g., "temperature vs salinity")
-- "General": Default for exploration queries
+## DATABASE SCHEMA
+Table: argo_data
+Columns: float_id (int), timestamp (datetime), latitude (float), longitude (float), pressure (float), temperature (float), salinity (float), dissolved_oxygen (float), chlorophyll (float)
 
-SUPPORTED LOCATIONS:
-Indian Ocean: arabian sea, bay of bengal, indian ocean, andaman sea, laccadive sea, red sea, persian gulf, mozambique channel
-Pacific Ocean: pacific ocean, south china sea, philippine sea, coral sea, tasman sea
-Atlantic Ocean: atlantic ocean, caribbean sea, gulf of mexico, mediterranean sea, north sea
-Indian Cities: chennai, mumbai, kollam, kochi, cochin, goa, kolkata, visakhapatnam, vizag, mangalore, tuticorin, pondicherry, puducherry, trivandrum, thiruvananthapuram, surat, kandla, paradip, andaman, port blair, karwar, ratnagiri
-Other Cities: sri lanka, singapore, tokyo, sydney, cape town, miami, maldives, mauritius
-Special: equator, tropics, southern ocean
+## SUPPORTED QUERY TYPES (choose the most appropriate):
+1. "Statistic" - For aggregations: averages, max/min, counts, sums
+   Examples: "average temperature", "how many floats", "maximum salinity", "count of records"
+   
+2. "Proximity" - Finding floats/data near a geographic location
+   Examples: "floats near Chennai", "nearest to Bay of Bengal", "data within 100km of Mumbai"
+   
+3. "Trajectory" - Path/movement tracking of a specific float over time
+   Examples: "trajectory of float 2902115", "path of float 2901234", "where did float X travel"
+   
+4. "Profile" - Vertical depth profile data (measurements at different depths)
+   Examples: "depth profile", "temperature vs pressure", "vertical profile of salinity"
+   
+5. "Time-Series" - Data changes over time periods
+   Examples: "temperature trend in 2024", "salinity from January to March", "monthly averages"
+   
+6. "Scatter" - Comparing relationships between two variables
+   Examples: "temperature vs salinity", "correlation between oxygen and depth"
+   
+7. "General" - Default for exploration or unclear queries
 
-EXTRACT THESE FIELDS:
-- "query_type": One of the types above
-- "metrics": List from ["temperature", "salinity", "dissolved_oxygen", "pressure"]
-- "location_name": Geographic location (lowercase)
-- "time_constraint": Time filter (e.g., "2023", "March 2024", "from 2020 to 2022")
-- "distance_km": Distance limit in km (integer)
-- "aggregation": "avg", "max", "min", or "count"
-- "float_id": Integer float ID if mentioned
-- "limit": Result limit (integer)
-- "year": Specific year if mentioned (integer)
+## SUPPORTED LOCATIONS (use exact names):
+**Indian Ocean:** arabian sea, bay of bengal, indian ocean, andaman sea, laccadive sea, red sea, persian gulf, mozambique channel
+**Pacific Ocean:** pacific ocean, south china sea, philippine sea, coral sea, tasman sea
+**Atlantic Ocean:** atlantic ocean, caribbean sea, gulf of mexico, mediterranean sea, north sea
+**Indian Cities:** chennai, mumbai, kollam, kochi, cochin, goa, kolkata, visakhapatnam, vizag, mangalore, tuticorin, pondicherry, puducherry, trivandrum, thiruvananthapuram, surat, kandla, paradip, andaman, port blair, karwar, ratnagiri
+**International:** sri lanka, singapore, tokyo, sydney, cape town, miami, maldives, mauritius
+**Special Regions:** equator, tropics, southern ocean
 
-User Question: "{question}"
+## FIELDS TO EXTRACT:
+- "query_type": One of the 7 types above (REQUIRED)
+- "metrics": Array of measurements needed: ["temperature", "salinity", "dissolved_oxygen", "pressure", "chlorophyll"]
+- "location_name": Geographic location name (lowercase, from supported list)
+- "latitude": Numeric latitude if explicitly mentioned (-90 to 90)
+- "longitude": Numeric longitude if explicitly mentioned (-180 to 180)
+- "time_constraint": Time period string (e.g., "2024", "March 2024", "from 2023 to 2024", "last 6 months")
+- "year": Specific year as integer (2020-2026)
+- "month": Specific month as integer (1-12)
+- "distance_km": Search radius in kilometers for proximity queries (default: 500)
+- "aggregation": For statistics - "avg", "max", "min", "count", or "sum"
+- "float_id": Integer float ID if mentioned (e.g., 2902115)
+- "limit": Number of results to return (default: 10 for lists, 500 for data)
+- "group_by": Field to group results by (e.g., "month", "float_id")
 
-Return ONLY a valid JSON object with the extracted fields. Omit fields that aren't applicable.
-"""
+## USER QUESTION:
+"{question}"
 
-SUMMARIZATION_PROMPT = """
-You are an oceanographic data analyst. Generate a precise, factual response using ONLY the provided data.
+## INSTRUCTIONS:
+1. Analyze the question carefully to determine the correct query_type
+2. Extract ALL relevant parameters mentioned
+3. Use lowercase for location_name
+4. For "nearest" or "near" queries, always use query_type "Proximity"
+5. For "float X" or "float ID X", extract the float_id as integer
+6. If no specific metrics mentioned, include relevant ones based on context
+7. Return ONLY a valid JSON object - no explanations, no markdown
 
-User Question: "{question}"
-Query Type: "{query_type}"
-Data Statistics: {results_summary}
-Sample Records: {sample_data}
+## OUTPUT FORMAT:
+Return a single JSON object with the extracted fields. Omit fields that don't apply.
 
-RULES:
-1. Use EXACT numbers from the statistics (temperatures, counts, distances, float IDs)
-2. Maximum 2-3 sentences
-3. Start with the key finding (e.g., "Found 127 floats...", "Average temperature is 28.5°C...")
-4. For Proximity: mention closest float ID, distance, and coordinates
-5. For Statistics: state the calculated value with units and record count
-6. For Trajectory: mention start/end points and time span
-7. For Profile: mention depth range and temperature gradient
-8. NEVER say "data is limited" unless 0 results
-9. NEVER use placeholder text - only real values from the data
+JSON:"""
 
-RESPONSE TEMPLATES:
-Proximity: "Found [N] floats near [location]. Float [ID] is closest at [X]km ([lat]°N, [lon]°E), with temperature [T]°C."
-Statistic: "The [aggregation] [metric] in [location] is [value][unit] across [N] measurements from [date range]."
-Trajectory: "Float [ID] recorded [N] positions from [start_date] to [end_date], traveling from ([lat1], [lon1]) to ([lat2], [lon2])."
-Profile: "Depth profile shows temperature decreasing from [T1]°C at surface to [T2]°C at [depth]m depth."
+SUMMARIZATION_PROMPT = """You are a senior oceanographic data scientist providing expert analysis for researchers and marine professionals.
 
-Generate response:
-"""
+## ANALYSIS REQUEST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 **Query:** {question}
+📊 **Analysis Type:** {query_type}
+📈 **Data Statistics:** {results_summary}
+📦 **Sample Records:** {sample_data}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## RESPONSE REQUIREMENTS
+
+**Style:** Professional, precise, and scientifically accurate
+**Length:** 2-4 sentences maximum, rich with specific data points
+
+## DATA INTEGRITY RULES
+✓ Use EXACT values from statistics - no rounding or estimation
+✓ Include proper scientific units: °C (temperature), PSU (salinity), dbar (pressure), km (distance)
+✓ Cite specific float IDs, coordinates, and measurement counts when available
+✓ Reference date ranges when temporal context is relevant
+✗ Never fabricate, interpolate, or assume data not present in the statistics
+
+## PROFESSIONAL RESPONSE FORMAT BY QUERY TYPE
+
+**🌊 Proximity/Spatial Analysis:**
+"Analysis identified [N] ARGO floats within the specified region of [location]. The nearest profiling float is **#[ID]**, positioned [X.XX] km from the target coordinates at [lat]°N, [lon]°E, with most recent observations of [T]°C (temperature) and [S] PSU (salinity)."
+
+**📊 Statistical Summary:**
+"Statistical analysis of [N] measurements from [location/timeframe] yields a **[aggregation] [metric] of [value] [unit]**. The dataset spans [date_start] to [date_end], providing robust coverage for this assessment."
+
+**🛤️ Float Trajectory:**
+"Float **#[ID]** has recorded [N] profile positions between [start_date] and [end_date]. The trajectory spans from [lat1]°N, [lon1]°E to [lat2]°N, [lon2]°E, covering approximately [distance] km."
+
+**📉 Depth Profile:**
+"Vertical profiling reveals [metric] gradients from **[value1] [unit]** at the surface to **[value2] [unit]** at [depth] dbar depth, characteristic of [brief scientific context if applicable]."
+
+**📈 Time-Series Trend:**
+"Temporal analysis of [metric] in [location] over [time_period] shows values ranging from **[min] to [max] [unit]**, with a mean of [avg] [unit] (n=[count] observations)."
+
+**⚠️ No Data Response:**
+"No ARGO float observations match the specified criteria [brief description]. The database currently covers [date_range] and [geographic scope]. Consider adjusting: [specific suggestions - e.g., broader date range, adjacent region, different float ID]."
+
+## GENERATE PROFESSIONAL RESPONSE:"""
 
 def get_intelligent_answer(user_question: str):
+    """
+    Main function to process user questions and return intelligent answers.
+    Uses LLM for intent parsing and response generation with robust error handling.
+    """
     import logging
     logging.basicConfig(filename="backend.log", level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    
+    start_time = time.time()
+    
     try:
         load_dotenv()
         engine = get_engine()
-        llm = get_llm()  # Auto-selects Gemini or Groq
+        llm = get_llm()  # Auto-selects best available LLM
 
         context = get_database_context(engine)
         if not context:
             logging.error("Could not connect to database.")
-            return {"query_type": "Error", "summary": "Could not connect to database.", "data": []}
+            return {"query_type": "Error", "summary": "Could not connect to database. Please try again later.", "data": []}
 
         # Format data availability info for responses
         min_date = context.get("min_date")
@@ -241,15 +428,31 @@ def get_intelligent_answer(user_question: str):
             max_date_str = max_date.strftime("%b %d, %Y") if hasattr(max_date, 'strftime') else str(max_date)[:10]
             data_range_info = f"Data available: {min_date_str} to {max_date_str}"
 
+        # === STEP 1: Parse user intent with LLM ===
         prompt = PromptTemplate.from_template(INTENT_PARSER_PROMPT)
         parser_chain = prompt | llm | StrOutputParser()
-        intent_json_str = parser_chain.invoke({"question": user_question})
+        
+        # Use retry logic for robustness
+        intent_json_str = invoke_with_retry(parser_chain, {"question": user_question}, max_retries=3)
 
+        # Extract JSON from response (handle markdown code blocks)
+        intent_json_str = intent_json_str.strip()
+        if intent_json_str.startswith("```"):
+            # Remove markdown code block
+            intent_json_str = re.sub(r'^```(?:json)?\s*', '', intent_json_str)
+            intent_json_str = re.sub(r'\s*```$', '', intent_json_str)
+        
         match = re.search(r'\{.*\}', intent_json_str, re.DOTALL)
         if not match:
-            logging.error("LLM did not return a valid JSON object.")
-            raise ValueError("LLM did not return a valid JSON object.")
-        intent = json.loads(match.group(0))
+            logging.error(f"LLM did not return valid JSON. Response: {intent_json_str[:200]}")
+            # Fallback: try to construct a basic intent from the question
+            intent = _fallback_intent_parser(user_question)
+        else:
+            try:
+                intent = json.loads(match.group(0))
+            except json.JSONDecodeError as je:
+                logging.error(f"JSON parse error: {je}. Attempting fallback...")
+                intent = _fallback_intent_parser(user_question)
 
 
         # --- Fallback pre-processing BEFORE sanitization (regex assist) ---
@@ -599,8 +802,8 @@ def get_intelligent_answer(user_question: str):
         # Build sample data string for LLM context
         sample_data_str = ""
         if data_records:
-            sample = data_records[:3]  # First 3 records as sample
-            sample_data_str = json.dumps(sample, default=str)[:500]  # Limit length
+            sample = data_records[:5]  # First 5 records as sample for better context
+            sample_data_str = json.dumps(sample, default=str)[:800]  # Increased limit
         
         # Handle empty results
         if num_records == 0:
@@ -617,33 +820,65 @@ def get_intelligent_answer(user_question: str):
         elif num_records < 10:
             results_summary_text += f" Few records found. {data_range_info}."
 
+        # === STEP 3: Generate natural language summary with LLM ===
         summarization_prompt = PromptTemplate.from_template(SUMMARIZATION_PROMPT)
         summary_chain = summarization_prompt | llm | StrOutputParser()
+        
         try:
-            summary = summary_chain.invoke({
+            # Use retry logic for summarization too
+            summary = invoke_with_retry(summary_chain, {
                 "question": user_question, 
                 "results_summary": results_summary_text,
                 "query_type": query_type,
-                "sample_data": sample_data_str if sample_data_str else "No sample data"
-            })
-        except Exception:
+                "sample_data": sample_data_str if sample_data_str else "No sample data available"
+            }, max_retries=2)
+            
+            # Clean up the summary (remove any markdown formatting)
+            summary = summary.strip()
+            if summary.startswith("```"):
+                summary = re.sub(r'^```\w*\s*', '', summary)
+                summary = re.sub(r'\s*```$', '', summary)
+                
+        except Exception as summary_error:
+            logging.warning(f"Summarization failed: {summary_error}. Using fallback.")
             # If summarization LLM call fails, fallback to internal summary
             summary = results_summary_text
 
-        logging.info(f"Query summary: {summary}")
+        # Calculate processing time
+        processing_time = time.time() - start_time
+        
+        logging.info(f"Query completed in {processing_time:.2f}s. Summary: {summary[:100]}...")
+        
         response_payload = {
             "query_type": intent.get("query_type"),
             "sql_query": generated_sql,
             "summary": summary,
             "data": data_records,
-            "data_range": data_range_info
+            "data_range": data_range_info,
+            "record_count": num_records,
+            "processing_time_ms": int(processing_time * 1000)
         }
-        # Debug: optionally surface parsed intent (without leaking internal complexity) if env var set
+        
+        # Debug: optionally surface parsed intent if env var set
         if os.getenv("SHOW_INTENT_JSON", "0") in ("1", "true", "yes"):
             response_payload["intent_debug"] = intent
+            
         return response_payload
 
     except Exception as e:
-        logging.error(f"Error in brain: {e}")
+        logging.error(f"Error in brain: {e}", exc_info=True)
         # Return a friendly error message, never a raw traceback
-        return {"query_type": "Error", "summary": f"A backend error occurred: {str(e)}. Please check your query and try again.", "data": []}
+        error_msg = str(e)
+        if "connection" in error_msg.lower() or "timeout" in error_msg.lower():
+            friendly_msg = "Database connection issue. Please try again in a moment."
+        elif "api" in error_msg.lower() or "rate" in error_msg.lower():
+            friendly_msg = "AI service temporarily unavailable. Please try again shortly."
+        else:
+            friendly_msg = f"An error occurred processing your query. Please try rephrasing or simplifying your question."
+        
+        return {
+            "query_type": "Error", 
+            "summary": friendly_msg, 
+            "data": [],
+            "error_detail": error_msg if os.getenv("DEBUG", "0") == "1" else None
+        }
