@@ -7,7 +7,7 @@
     
     <!-- PWA Meta -->
     <meta name="theme-color" content="#3b82f6">
-    <meta name="description" content="FloatChart analytics dashboard">
+    <meta name="description" content="FloatChart analytics dashboard - Real-time ocean data visualization">
     <link rel="manifest" href="/static/manifest.json">
     
     <!-- Favicon -->
@@ -16,23 +16,106 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- Styles -->
-    <link rel="stylesheet" href="/static/css/styles.css">
-    
     <style>
-        /* Dashboard-specific styles */
+        /* ============================================
+           CSS Variables - Dark/Light Theme
+           ============================================ */
+        :root {
+            /* Dark Theme (Default) */
+            --bg-primary: #0a0f1a;
+            --bg-secondary: #111827;
+            --bg-elevated: #1e293b;
+            --bg-hover: #334155;
+            --bg-card: rgba(30, 41, 59, 0.85);
+            
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-medium: rgba(255, 255, 255, 0.15);
+            
+            --accent-primary: #3b82f6;
+            --accent-secondary: #06b6d4;
+            --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #06b6d4 50%, #8b5cf6 100%);
+            
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --shadow-glow: 0 0 40px rgba(59, 130, 246, 0.25);
+            
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+        }
+        
+        [data-theme="light"] {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-elevated: #f1f5f9;
+            --bg-hover: #e2e8f0;
+            --bg-card: rgba(255, 255, 255, 0.95);
+            
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            
+            --border-subtle: rgba(0, 0, 0, 0.08);
+            --border-medium: rgba(0, 0, 0, 0.12);
+            
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.08);
+            --shadow-glow: 0 0 40px rgba(59, 130, 246, 0.12);
+        }
+        
+        /* ============================================
+           Reset & Base
+           ============================================ */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+            font-size: 16px;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { 
+            background: var(--bg-hover); 
+            border-radius: 5px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+        
+        /* ============================================
+           Dashboard Layout
+           ============================================ */
         .dashboard-layout {
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            background: var(--bg-primary);
         }
         
+        /* Header */
         .dashboard-header {
             display: flex;
             justify-content: space-between;
@@ -43,16 +126,23 @@
             position: sticky;
             top: 0;
             z-index: 100;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
         }
         
         .dashboard-logo {
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             font-weight: 700;
             color: var(--text-primary);
             text-decoration: none;
+            transition: transform 0.2s ease;
+        }
+        
+        .dashboard-logo:hover {
+            transform: scale(1.02);
         }
         
         .dashboard-logo span {
@@ -64,24 +154,89 @@
         
         .dashboard-nav {
             display: flex;
-            gap: 1rem;
+            gap: 0.5rem;
             align-items: center;
         }
         
         .nav-link {
-            padding: 0.5rem 1rem;
+            padding: 0.625rem 1.25rem;
             border-radius: var(--radius-md);
             color: var(--text-secondary);
             text-decoration: none;
             font-weight: 500;
-            transition: all 0.2s;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
         
-        .nav-link:hover, .nav-link.active {
+        .nav-link:hover {
             background: var(--bg-elevated);
-            color: var(--accent-primary);
+            color: var(--text-primary);
         }
         
+        .nav-link.active {
+            background: var(--accent-primary);
+            color: white;
+        }
+        
+        /* Theme Toggle Button - Professional Design */
+        .theme-toggle {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--bg-elevated);
+            border: 2px solid var(--border-subtle);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-left: 0.75rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .theme-toggle:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            transform: rotate(15deg) scale(1.05);
+            box-shadow: var(--shadow-glow);
+        }
+        
+        .theme-toggle:active {
+            transform: rotate(15deg) scale(0.95);
+        }
+        
+        .theme-toggle svg {
+            width: 22px;
+            height: 22px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        [data-theme="dark"] .sun-icon { 
+            display: block; 
+            opacity: 1;
+            transform: rotate(0deg);
+        }
+        [data-theme="dark"] .moon-icon { 
+            display: none; 
+            opacity: 0;
+        }
+        [data-theme="light"] .sun-icon { 
+            display: none; 
+            opacity: 0;
+        }
+        [data-theme="light"] .moon-icon { 
+            display: block; 
+            opacity: 1;
+            transform: rotate(0deg);
+        }
+        
+        /* Main Content */
         .dashboard-content {
             flex: 1;
             padding: 2rem;
@@ -90,91 +245,161 @@
             width: 100%;
         }
         
-        .dashboard-title {
-            font-size: 2rem;
-            font-weight: 800;
-            margin-bottom: 0.5rem;
-            background: var(--accent-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
-        .dashboard-subtitle {
-            color: var(--text-secondary);
-            margin-bottom: 2rem;
-        }
-        
-        /* Stats Overview */
-        .stats-overview {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        /* Page Header */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
         
-        .overview-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-xl);
-            padding: 1.5rem;
-            position: relative;
-            overflow: hidden;
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
         }
         
-        .overview-card::before {
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            margin-top: 0.5rem;
+            font-weight: 400;
+        }
+        
+        .region-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .region-selector label {
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .region-selector select {
+            padding: 0.75rem 2.5rem 0.75rem 1rem;
+            border-radius: var(--radius-md);
+            background: var(--bg-elevated);
+            border: 2px solid var(--border-subtle);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            min-width: 220px;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            transition: all 0.2s ease;
+        }
+        
+        .region-selector select:hover {
+            border-color: var(--accent-primary);
+            background-color: var(--bg-hover);
+        }
+        
+        .region-selector select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+        }
+        
+        /* Stats Overview Cards */
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-xl);
+            padding: 1.75rem;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-card);
+            border-color: var(--border-medium);
+        }
+        
+        .stat-card::before {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            height: 3px;
-            background: var(--accent-gradient);
+            height: 4px;
         }
         
-        .overview-card.temp::before { background: linear-gradient(90deg, #ef4444, #f97316); }
-        .overview-card.sal::before { background: linear-gradient(90deg, #3b82f6, #06b6d4); }
-        .overview-card.floats::before { background: linear-gradient(90deg, #22c55e, #10b981); }
-        .overview-card.depth::before { background: linear-gradient(90deg, #8b5cf6, #a855f7); }
+        .stat-card.temp::before { background: linear-gradient(90deg, #ef4444, #f97316); }
+        .stat-card.sal::before { background: linear-gradient(90deg, #3b82f6, #06b6d4); }
+        .stat-card.floats::before { background: linear-gradient(90deg, #22c55e, #10b981); }
+        .stat-card.depth::before { background: linear-gradient(90deg, #8b5cf6, #a855f7); }
         
-        .overview-icon {
-            width: 48px;
-            height: 48px;
+        .stat-icon {
+            width: 56px;
+            height: 56px;
             border-radius: var(--radius-lg);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
+            font-size: 1.75rem;
+            margin-bottom: 1.25rem;
         }
         
-        .overview-card.temp .overview-icon { background: rgba(239, 68, 68, 0.15); }
-        .overview-card.sal .overview-icon { background: rgba(59, 130, 246, 0.15); }
-        .overview-card.floats .overview-icon { background: rgba(34, 197, 94, 0.15); }
-        .overview-card.depth .overview-icon { background: rgba(139, 92, 246, 0.15); }
+        .stat-card.temp .stat-icon { background: rgba(239, 68, 68, 0.15); }
+        .stat-card.sal .stat-icon { background: rgba(59, 130, 246, 0.15); }
+        .stat-card.floats .stat-icon { background: rgba(34, 197, 94, 0.15); }
+        .stat-card.depth .stat-icon { background: rgba(139, 92, 246, 0.15); }
         
-        .overview-label {
-            font-size: 0.875rem;
+        .stat-label {
+            font-size: 0.85rem;
             color: var(--text-secondary);
-            margin-bottom: 0.25rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.5rem;
         }
         
-        .overview-value {
-            font-size: 2rem;
+        .stat-value {
+            font-size: 2.25rem;
             font-weight: 700;
             color: var(--text-primary);
+            line-height: 1.2;
+            letter-spacing: -0.02em;
         }
         
-        .overview-change {
+        .stat-meta {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.75rem;
             display: flex;
             align-items: center;
-            gap: 0.25rem;
-            font-size: 0.75rem;
-            margin-top: 0.5rem;
+            gap: 0.375rem;
+            font-weight: 500;
         }
         
-        .overview-change.positive { color: #22c55e; }
-        .overview-change.negative { color: #ef4444; }
+        .stat-meta.positive { color: #22c55e; }
         
         /* Charts Grid */
         .charts-grid {
@@ -184,129 +409,186 @@
             margin-bottom: 2rem;
         }
         
-        @media (max-width: 1024px) {
-            .charts-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-        
         .chart-card {
-            background: var(--card-bg);
+            background: var(--bg-card);
             border: 1px solid var(--border-subtle);
             border-radius: var(--radius-xl);
             padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .chart-card:hover {
+            box-shadow: var(--shadow-card);
+            border-color: var(--border-medium);
         }
         
         .chart-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
+            align-items: flex-start;
+            margin-bottom: 1.25rem;
         }
         
         .chart-title {
-            font-size: 1rem;
+            font-size: 1.15rem;
             font-weight: 600;
             color: var(--text-primary);
+            letter-spacing: -0.01em;
         }
         
         .chart-subtitle {
-            font-size: 0.75rem;
+            font-size: 0.85rem;
             color: var(--text-muted);
+            margin-top: 0.25rem;
+            font-weight: 400;
         }
         
         .chart-container {
-            height: 280px;
+            height: 300px;
             position: relative;
         }
         
-        /* Recent Activity */
-        .activity-section {
-            background: var(--card-bg);
+        /* Data Summary Section */
+        .summary-section {
+            background: var(--bg-card);
             border: 1px solid var(--border-subtle);
             border-radius: var(--radius-xl);
-            padding: 1.5rem;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
         
-        .activity-title {
-            font-size: 1.125rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: var(--text-primary);
-        }
-        
-        .activity-list {
+        .summary-header {
             display: flex;
-            flex-direction: column;
+            align-items: center;
             gap: 0.75rem;
+            margin-bottom: 1.5rem;
         }
         
-        .activity-item {
+        .summary-icon-main {
+            font-size: 1.75rem;
+        }
+        
+        .summary-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+        
+        .summary-item {
             display: flex;
             align-items: center;
             gap: 1rem;
-            padding: 0.75rem;
+            padding: 1.25rem;
             background: var(--bg-elevated);
             border-radius: var(--radius-md);
-            transition: all 0.2s;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
         }
         
-        .activity-item:hover {
+        .summary-item:hover {
             background: var(--bg-hover);
+            border-color: var(--border-subtle);
+            transform: translateX(4px);
         }
         
-        .activity-icon {
-            width: 36px;
-            height: 36px;
+        .summary-icon {
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1rem;
-            background: var(--bg-secondary);
+            font-size: 1.4rem;
+            background: var(--bg-primary);
+            flex-shrink: 0;
         }
         
-        .activity-content {
+        .summary-content {
             flex: 1;
+            min-width: 0;
         }
         
-        .activity-text {
-            font-size: 0.875rem;
+        .summary-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+        
+        .summary-value {
+            font-size: 1rem;
+            font-weight: 600;
             color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
-        .activity-time {
-            font-size: 0.75rem;
+        /* Footer */
+        .dashboard-footer {
+            padding: 1.5rem 2rem;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-subtle);
+            text-align: center;
+        }
+        
+        .footer-text {
             color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 400;
         }
         
-        /* Coverage Map Placeholder */
-        .coverage-section {
-            background: var(--card-bg);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-xl);
-            padding: 1.5rem;
-            margin-bottom: 2rem;
+        .footer-text a {
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
         }
         
-        .coverage-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
+        .footer-text a:hover {
+            text-decoration: underline;
+            color: var(--accent-secondary);
         }
         
-        .coverage-map {
-            height: 300px;
-            background: var(--bg-elevated);
-            border-radius: var(--radius-lg);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-muted);
+        /* Loading Skeleton */
+        .skeleton {
+            background: linear-gradient(90deg,
+                var(--bg-elevated) 25%,
+                var(--bg-hover) 50%,
+                var(--bg-elevated) 75%
+            );
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite ease-in-out;
+            border-radius: var(--radius-sm);
+            display: inline-block;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
         }
         
         /* Responsive */
+        @media (max-width: 1200px) {
+            .stats-overview { grid-template-columns: repeat(2, 1fr); }
+        }
+        
+        @media (max-width: 1024px) {
+            .charts-grid { grid-template-columns: 1fr; }
+        }
+        
         @media (max-width: 768px) {
             .dashboard-header {
                 flex-direction: column;
@@ -314,39 +596,58 @@
                 padding: 1rem;
             }
             
+            .dashboard-nav {
+                width: 100%;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
             .dashboard-content {
-                padding: 1rem;
+                padding: 1.25rem;
             }
             
-            .dashboard-title {
-                font-size: 1.5rem;
+            .page-title {
+                font-size: 1.875rem;
             }
             
-            .overview-value {
-                font-size: 1.5rem;
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .region-selector {
+                width: 100%;
+            }
+            
+            .region-selector select {
+                flex: 1;
+            }
+            
+            .stat-value {
+                font-size: 1.75rem;
+            }
+            
+            .stat-card {
+                padding: 1.25rem;
             }
         }
         
-        /* Loading skeleton animation */
-        .skeleton {
-            background: linear-gradient(
-                90deg,
-                var(--bg-elevated) 25%,
-                var(--bg-hover) 50%,
-                var(--bg-elevated) 75%
-            );
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite;
-            border-radius: var(--radius-md);
-        }
-        
-        @keyframes shimmer {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+        @media (max-width: 640px) {
+            .stats-overview { grid-template-columns: 1fr; }
+            
+            .nav-link {
+                padding: 0.5rem 0.875rem;
+                font-size: 0.875rem;
+            }
+            
+            .theme-toggle {
+                width: 42px;
+                height: 42px;
+            }
         }
     </style>
 </head>
-<body class="dashboard-page">
+<body>
     <div class="dashboard-layout">
         <!-- Header -->
         <header class="dashboard-header">
@@ -355,11 +656,13 @@
             </a>
             
             <nav class="dashboard-nav">
-                <a href="/" class="nav-link">Chat</a>
-                <a href="/map" class="nav-link">Map Explorer</a>
-                <a href="/dashboard" class="nav-link active">Dashboard</a>
-                <button class="theme-toggle" id="themeToggle" title="Toggle theme">
-                    <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <a href="/" class="nav-link">💬 Chat</a>
+                <a href="/map" class="nav-link">🗺️ Map</a>
+                <a href="/dashboard" class="nav-link active">📊 Dashboard</a>
+                
+                <button class="theme-toggle" id="themeToggle" title="Toggle dark/light mode" aria-label="Toggle theme">
+                    <!-- Sun Icon (shown in dark mode - click to switch to light) -->
+                    <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="5"></circle>
                         <line x1="12" y1="1" x2="12" y2="3"></line>
                         <line x1="12" y1="21" x2="12" y2="23"></line>
@@ -370,7 +673,8 @@
                         <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
                         <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
                     </svg>
-                    <svg class="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                    <!-- Moon Icon (shown in light mode - click to switch to dark) -->
+                    <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                     </svg>
                 </button>
@@ -379,75 +683,69 @@
         
         <!-- Main Content -->
         <main class="dashboard-content">
-            <div class="dashboard-header-row" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+            <!-- Page Header -->
+            <div class="page-header">
                 <div>
-                    <h1 class="dashboard-title">Analytics Dashboard</h1>
-                    <p class="dashboard-subtitle" id="regionSubtitle">Comprehensive overview of ARGO float oceanographic data</p>
+                    <h1 class="page-title">Analytics Dashboard</h1>
+                    <p class="page-subtitle" id="regionSubtitle">Real-time oceanographic data from ARGO floats worldwide</p>
                 </div>
-                <div class="region-selector" style="display: flex; align-items: center; gap: 0.75rem;">
-                    <label for="regionSelect" style="color: var(--text-secondary); font-weight: 500;">Region:</label>
-                    <select id="regionSelect" style="padding: 0.5rem 1rem; border-radius: var(--radius-md); background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-primary); font-size: 0.875rem; cursor: pointer; min-width: 180px;">
-                        <option value="all">🌍 All Regions</option>
-                        <option value="bay_of_bengal">🌊 Bay of Bengal</option>
-                        <option value="arabian_sea">🌊 Arabian Sea</option>
-                        <option value="indian_ocean">🌊 Indian Ocean</option>
-                        <option value="pacific">🌊 Pacific Ocean</option>
-                        <option value="atlantic">🌊 Atlantic Ocean</option>
-                        <option value="mediterranean">🌊 Mediterranean Sea</option>
+                
+                <div class="region-selector">
+                    <label for="regionSelect">🌍 Region:</label>
+                    <select id="regionSelect">
+                        <option value="all">All Regions (Global)</option>
+                        <option value="bay_of_bengal">Bay of Bengal</option>
+                        <option value="arabian_sea">Arabian Sea</option>
+                        <option value="indian_ocean">Indian Ocean</option>
+                        <option value="pacific">Pacific Ocean</option>
+                        <option value="atlantic">Atlantic Ocean</option>
+                        <option value="mediterranean">Mediterranean Sea</option>
                     </select>
                 </div>
             </div>
             
             <!-- Stats Overview -->
             <div class="stats-overview">
-                <div class="overview-card temp">
-                    <div class="overview-icon">🌡️</div>
-                    <div class="overview-label">Average Temperature</div>
-                    <div class="overview-value" id="avgTemp">--°C</div>
-                    <div class="overview-change positive" id="tempChange">
-                        <span>↑</span> Loading...
-                    </div>
+                <div class="stat-card temp">
+                    <div class="stat-icon">🌡️</div>
+                    <div class="stat-label">Avg Temperature</div>
+                    <div class="stat-value" id="avgTemp">--°C</div>
+                    <div class="stat-meta positive" id="tempRange">Loading range...</div>
                 </div>
                 
-                <div class="overview-card sal">
-                    <div class="overview-icon">🧪</div>
-                    <div class="overview-label">Average Salinity</div>
-                    <div class="overview-value" id="avgSal">-- PSU</div>
-                    <div class="overview-change" id="salChange">
-                        Loading...
-                    </div>
+                <div class="stat-card sal">
+                    <div class="stat-icon">🧪</div>
+                    <div class="stat-label">Avg Salinity</div>
+                    <div class="stat-value" id="avgSal">-- PSU</div>
+                    <div class="stat-meta" id="salRange">Loading range...</div>
                 </div>
                 
-                <div class="overview-card floats">
-                    <div class="overview-icon">🔵</div>
-                    <div class="overview-label">Active Floats</div>
-                    <div class="overview-value" id="floatCount">--</div>
-                    <div class="overview-change positive" id="floatChange">
-                        Across Indian Ocean region
-                    </div>
+                <div class="stat-card floats">
+                    <div class="stat-icon">🔵</div>
+                    <div class="stat-label">Active Floats</div>
+                    <div class="stat-value" id="floatCount">--</div>
+                    <div class="stat-meta positive" id="recordCount">Loading records...</div>
                 </div>
                 
-                <div class="overview-card depth">
-                    <div class="overview-icon">⬇️</div>
-                    <div class="overview-label">Max Depth Recorded</div>
-                    <div class="overview-value" id="maxDepth">-- m</div>
-                    <div class="overview-change" id="depthChange">
-                        Pressure profiles available
-                    </div>
+                <div class="stat-card depth">
+                    <div class="stat-icon">⬇️</div>
+                    <div class="stat-label">Max Depth</div>
+                    <div class="stat-value" id="maxDepth">-- m</div>
+                    <div class="stat-meta" id="depthMeta">Pressure profiles</div>
                 </div>
             </div>
             
-            <!-- Charts -->
+            <!-- Charts Grid -->
             <div class="charts-grid">
                 <div class="chart-card">
                     <div class="chart-header">
                         <div>
                             <div class="chart-title">Temperature Distribution</div>
-                            <div class="chart-subtitle">Sea surface temperature histogram</div>
+                            <div class="chart-subtitle">Ocean temperature histogram (°C)</div>
                         </div>
                     </div>
                     <div class="chart-container">
-                        <canvas id="tempDistChart"></canvas>
+                        <canvas id="tempChart"></canvas>
                     </div>
                 </div>
                 
@@ -455,19 +753,19 @@
                     <div class="chart-header">
                         <div>
                             <div class="chart-title">Salinity Distribution</div>
-                            <div class="chart-subtitle">Practical salinity unit histogram</div>
+                            <div class="chart-subtitle">Practical salinity units (PSU)</div>
                         </div>
                     </div>
                     <div class="chart-container">
-                        <canvas id="salDistChart"></canvas>
+                        <canvas id="salChart"></canvas>
                     </div>
                 </div>
                 
                 <div class="chart-card">
                     <div class="chart-header">
                         <div>
-                            <div class="chart-title">Data Collection Timeline</div>
-                            <div class="chart-subtitle">Monthly observation counts</div>
+                            <div class="chart-title">Monthly Observations</div>
+                            <div class="chart-subtitle">Data collection timeline</div>
                         </div>
                     </div>
                     <div class="chart-container">
@@ -479,7 +777,7 @@
                     <div class="chart-header">
                         <div>
                             <div class="chart-title">Regional Coverage</div>
-                            <div class="chart-subtitle">Data distribution by ocean region</div>
+                            <div class="chart-subtitle">Data distribution by ocean</div>
                         </div>
                     </div>
                     <div class="chart-container">
@@ -488,314 +786,375 @@
                 </div>
             </div>
             
-            <!-- Recent Activity -->
-            <div class="activity-section">
-                <h2 class="activity-title">📊 Data Summary</h2>
-                <div class="activity-list" id="activityList">
-                    <div class="activity-item">
-                        <div class="activity-icon">🌊</div>
-                        <div class="activity-content">
-                            <div class="activity-text">Loading database statistics...</div>
-                            <div class="activity-time">Please wait</div>
+            <!-- Data Summary -->
+            <div class="summary-section">
+                <div class="summary-header">
+                    <span class="summary-icon-main">📊</span>
+                    <h2 class="summary-title">Database Summary</h2>
+                </div>
+                
+                <div class="summary-grid" id="summaryGrid">
+                    <div class="summary-item">
+                        <div class="summary-icon">📦</div>
+                        <div class="summary-content">
+                            <div class="summary-label">Total Records</div>
+                            <div class="summary-value" id="totalRecords">Loading...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-item">
+                        <div class="summary-icon">🔵</div>
+                        <div class="summary-content">
+                            <div class="summary-label">Unique Floats</div>
+                            <div class="summary-value" id="uniqueFloats">Loading...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-item">
+                        <div class="summary-icon">📅</div>
+                        <div class="summary-content">
+                            <div class="summary-label">Date Range</div>
+                            <div class="summary-value" id="dateRange">Loading...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-item">
+                        <div class="summary-icon">🌍</div>
+                        <div class="summary-content">
+                            <div class="summary-label">Geographic Coverage</div>
+                            <div class="summary-value" id="geoCoverage">Indian Ocean, Pacific, Atlantic</div>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-item">
+                        <div class="summary-icon">✅</div>
+                        <div class="summary-content">
+                            <div class="summary-label">Database Status</div>
+                            <div class="summary-value" id="dbStatus">Checking...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-item">
+                        <div class="summary-icon">⚡</div>
+                        <div class="summary-content">
+                            <div class="summary-label">Data Source</div>
+                            <div class="summary-value">NOAA ERDDAP / ARGO Program</div>
                         </div>
                     </div>
                 </div>
             </div>
         </main>
+        
+        <!-- Footer -->
+        <footer class="dashboard-footer">
+            <p class="footer-text">
+                FloatChart © 2024–2026 • 
+                <a href="https://github.com/Anbu-2006/ARGOFLOAT-CHART" target="_blank">GitHub</a> • 
+                Data from <a href="https://argo.ucsd.edu/" target="_blank">ARGO Program</a>
+            </p>
+        </footer>
     </div>
     
     <script>
+        // ============================================
         // Theme Management
+        // ============================================
         const THEME_KEY = 'floatchart_theme';
         
         function initTheme() {
-            const savedTheme = localStorage.getItem(THEME_KEY) || 'dark';
-            applyTheme(savedTheme);
+            const saved = localStorage.getItem(THEME_KEY);
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = saved || (prefersDark ? 'dark' : 'light');
+            applyTheme(theme);
         }
         
         function applyTheme(theme) {
             document.documentElement.setAttribute('data-theme', theme);
             localStorage.setItem(THEME_KEY, theme);
+        }
+        
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            applyTheme(next);
             
-            const sunIcon = document.querySelector('.sun-icon');
-            const moonIcon = document.querySelector('.moon-icon');
-            if (sunIcon && moonIcon) {
-                sunIcon.style.display = theme === 'dark' ? 'block' : 'none';
-                moonIcon.style.display = theme === 'light' ? 'block' : 'none';
+            // Update charts with new colors
+            if (window.chartsLoaded) {
+                updateChartColors();
             }
         }
         
-        document.getElementById('themeToggle').addEventListener('click', () => {
-            const current = document.documentElement.getAttribute('data-theme');
-            applyTheme(current === 'dark' ? 'light' : 'dark');
-        });
-        
+        document.getElementById('themeToggle').addEventListener('click', toggleTheme);
         initTheme();
         
-        // Chart configurations
-        const chartDefaults = {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            }
-        };
-        
-        // Store chart instances for updating
-        let tempChart = null;
-        let salChart = null;
-        let timelineChart = null;
-        let regionChart = null;
+        // ============================================
+        // Chart Configuration
+        // ============================================
+        let tempChart, salChart, timelineChart, regionChart;
+        window.chartsLoaded = false;
         
         function getChartColors() {
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
             return {
                 text: isDark ? '#94a3b8' : '#64748b',
-                grid: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-                primary: '#3b82f6',
-                secondary: '#06b6d4',
-                accent: '#8b5cf6'
+                grid: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+                temp: { bg: 'rgba(239, 68, 68, 0.75)', border: '#ef4444' },
+                sal: { bg: 'rgba(59, 130, 246, 0.75)', border: '#3b82f6' },
+                timeline: { bg: 'rgba(6, 182, 212, 0.2)', border: '#06b6d4' }
             };
         }
         
-        // Region selector handler
-        document.getElementById('regionSelect').addEventListener('change', async (e) => {
-            const region = e.target.value;
-            await loadDashboardData(region);
+        function updateChartColors() {
+            const colors = getChartColors();
+            
+            [tempChart, salChart, timelineChart, regionChart].forEach(chart => {
+                if (chart) {
+                    if (chart.options.scales?.x) {
+                        chart.options.scales.x.ticks.color = colors.text;
+                        chart.options.scales.x.grid.color = colors.grid;
+                    }
+                    if (chart.options.scales?.y) {
+                        chart.options.scales.y.ticks.color = colors.text;
+                        chart.options.scales.y.grid.color = colors.grid;
+                    }
+                    if (chart.options.plugins?.legend?.labels) {
+                        chart.options.plugins.legend.labels.color = colors.text;
+                    }
+                    chart.update();
+                }
+            });
+        }
+        
+        // ============================================
+        // Data Loading
+        // ============================================
+        document.getElementById('regionSelect').addEventListener('change', (e) => {
+            loadDashboardData(e.target.value);
         });
         
-        // Fetch dashboard data
         async function loadDashboardData(region = 'all') {
             try {
-                // Show loading state
-                document.getElementById('avgTemp').innerHTML = '<span class="skeleton" style="display:inline-block;width:60px;height:24px;"></span>';
-                document.getElementById('avgSal').innerHTML = '<span class="skeleton" style="display:inline-block;width:60px;height:24px;"></span>';
-                document.getElementById('floatCount').innerHTML = '<span class="skeleton" style="display:inline-block;width:60px;height:24px;"></span>';
+                showLoading();
                 
-                // Fetch status first
-                const statusResponse = await fetch('/api/status');
-                const statusData = await statusResponse.json();
+                // Fetch API status
+                const statusRes = await fetch('/api/status');
+                const status = await statusRes.json();
+                updateSummary(status);
                 
-                // Update activity summary
-                updateActivitySummary(statusData);
+                // Fetch dashboard stats
+                const statsRes = await fetch(`/api/dashboard/stats?region=${region}`);
+                const stats = await statsRes.json();
                 
-                // Fetch real dashboard stats with region filter
-                const statsResponse = await fetch(`/api/dashboard/stats?region=${region}`);
-                const stats = await statsResponse.json();
-                
-                // Update region subtitle
+                // Update subtitle
+                const regionName = stats.region || 'All Regions';
                 document.getElementById('regionSubtitle').textContent = 
-                    stats.region ? `Statistics for ${stats.region}` : 'Comprehensive overview of ARGO float oceanographic data';
+                    region === 'all' 
+                        ? 'Real-time oceanographic data from ARGO floats worldwide'
+                        : `Filtered data for ${regionName}`;
                 
+                // Update stats cards
                 if (stats.overview) {
-                    // Update overview cards with REAL data
-                    document.getElementById('avgTemp').textContent = `${stats.overview.avg_temperature}°C`;
-                    document.getElementById('avgSal').textContent = `${stats.overview.avg_salinity} PSU`;
-                    document.getElementById('floatCount').textContent = stats.overview.float_count.toLocaleString();
-                    document.getElementById('floatChange').textContent = `${stats.overview.total_records.toLocaleString()} total records`;
-                    document.getElementById('maxDepth').textContent = `${Math.round(stats.overview.max_depth).toLocaleString()} m`;
+                    const o = stats.overview;
+                    document.getElementById('avgTemp').textContent = `${o.avg_temperature}°C`;
+                    document.getElementById('avgSal').textContent = `${o.avg_salinity} PSU`;
+                    document.getElementById('floatCount').textContent = o.float_count.toLocaleString();
+                    document.getElementById('maxDepth').textContent = `${Math.round(o.max_depth).toLocaleString()} m`;
+                    document.getElementById('recordCount').textContent = `${o.total_records.toLocaleString()} total records`;
+                    document.getElementById('tempRange').textContent = `Range: ${o.min_temp || '--'}° to ${o.max_temp || '--'}°C`;
+                    document.getElementById('salRange').textContent = `Range: ${o.min_sal || '--'} to ${o.max_sal || '--'} PSU`;
                 }
                 
-                // Load/Update charts with real data
-                await loadCharts(stats);
+                // Load charts
+                loadCharts(stats);
                 
             } catch (error) {
-                console.error('Failed to load dashboard data:', error);
+                console.error('Failed to load dashboard:', error);
+                document.getElementById('dbStatus').textContent = '🔴 Connection Error';
             }
         }
         
-        function updateActivitySummary(data) {
-            const activityList = document.getElementById('activityList');
-            
-            const activities = [
-                {
-                    icon: '📊',
-                    text: `Total Records: ${data.records?.toLocaleString() || 'N/A'}`,
-                    time: 'In database'
-                },
-                {
-                    icon: '🔵',
-                    text: `Unique ARGO Floats: ${data.unique_floats?.toLocaleString() || 'N/A'}`,
-                    time: 'Tracked floats'
-                },
-                {
-                    icon: '📅',
-                    text: `Data Range: ${data.data_range?.start || 'N/A'} to ${data.data_range?.end || 'N/A'}`,
-                    time: 'Temporal coverage'
-                },
-                {
-                    icon: '🌍',
-                    text: 'Coverage: Indian Ocean, Bay of Bengal, Arabian Sea',
-                    time: 'Geographic region'
-                },
-                {
-                    icon: '✅',
-                    text: `Database Status: ${data.database === 'connected' ? 'Connected' : 'Disconnected'}`,
-                    time: data.status || 'Unknown'
-                }
-            ];
-            
-            activityList.innerHTML = activities.map(a => `
-                <div class="activity-item">
-                    <div class="activity-icon">${a.icon}</div>
-                    <div class="activity-content">
-                        <div class="activity-text">${a.text}</div>
-                        <div class="activity-time">${a.time}</div>
-                    </div>
-                </div>
-            `).join('');
+        function showLoading() {
+            const skeleton = '<span class="skeleton" style="width:100px;height:32px;"></span>';
+            document.getElementById('avgTemp').innerHTML = skeleton;
+            document.getElementById('avgSal').innerHTML = skeleton;
+            document.getElementById('floatCount').innerHTML = skeleton;
+            document.getElementById('maxDepth').innerHTML = skeleton;
         }
         
-        async function loadCharts(stats) {
+        function updateSummary(data) {
+            document.getElementById('totalRecords').textContent = 
+                data.records ? data.records.toLocaleString() : 'N/A';
+            document.getElementById('uniqueFloats').textContent = 
+                data.unique_floats ? data.unique_floats.toLocaleString() : 'N/A';
+            document.getElementById('dateRange').textContent = 
+                data.data_range ? `${data.data_range.start} to ${data.data_range.end}` : 'N/A';
+            document.getElementById('dbStatus').textContent = 
+                data.database === 'connected' ? '🟢 Connected' : '🔴 Disconnected';
+        }
+        
+        function loadCharts(stats) {
             const colors = getChartColors();
             
-            // Destroy existing charts before recreating
-            if (tempChart) tempChart.destroy();
-            if (salChart) salChart.destroy();
+            // Destroy existing charts
+            [tempChart, salChart, timelineChart, regionChart].forEach(c => c?.destroy());
             
-            // Temperature Distribution with REAL data
-            const tempLabels = ['20-22', '22-24', '24-26', '26-28', '28-30', '30+'];
+            // Temperature Distribution
+            const tempLabels = ['<20', '20-22', '22-24', '24-26', '26-28', '28-30', '30+'];
             const tempData = stats?.temperature_distribution 
-                ? tempLabels.map(label => stats.temperature_distribution[label] || 0)
-                : [15, 35, 80, 120, 95, 45];
+                ? Object.values(stats.temperature_distribution)
+                : [10, 25, 45, 80, 120, 95, 35];
             
-            tempChart = new Chart(document.getElementById('tempDistChart'), {
+            tempChart = new Chart(document.getElementById('tempChart'), {
                 type: 'bar',
                 data: {
                     labels: tempLabels,
                     datasets: [{
                         data: tempData,
-                        backgroundColor: 'rgba(239, 68, 68, 0.7)',
-                        borderColor: '#ef4444',
-                        borderWidth: 1,
-                        borderRadius: 4
+                        backgroundColor: colors.temp.bg,
+                        borderColor: colors.temp.border,
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        borderSkipped: false
                     }]
                 },
                 options: {
-                    ...chartDefaults,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
                     scales: {
                         x: { 
-                            title: { display: true, text: 'Temperature (°C)', color: colors.text },
-                            ticks: { color: colors.text },
+                            title: { display: true, text: 'Temperature (°C)', color: colors.text, font: { weight: 600 } },
+                            ticks: { color: colors.text, font: { size: 12 } },
                             grid: { color: colors.grid }
                         },
                         y: { 
-                            title: { display: true, text: 'Count', color: colors.text },
-                            ticks: { color: colors.text },
+                            title: { display: true, text: 'Count (thousands)', color: colors.text, font: { weight: 600 } },
+                            ticks: { color: colors.text, font: { size: 12 } },
                             grid: { color: colors.grid }
                         }
                     }
                 }
             });
             
-            // Salinity Distribution with REAL data
-            const salLabels = ['33-34', '34-35', '35-36', '36-37'];
+            // Salinity Distribution
+            const salLabels = ['<33', '33-34', '34-35', '35-36', '36-37', '37+'];
             const salData = stats?.salinity_distribution
-                ? salLabels.map(label => stats.salinity_distribution[label] || 0)
-                : [45, 80, 150, 85];
-                
-            salChart = new Chart(document.getElementById('salDistChart'), {
+                ? Object.values(stats.salinity_distribution)
+                : [15, 55, 100, 150, 80, 20];
+            
+            salChart = new Chart(document.getElementById('salChart'), {
                 type: 'bar',
                 data: {
                     labels: salLabels,
                     datasets: [{
                         data: salData,
-                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
-                        borderColor: '#3b82f6',
-                        borderWidth: 1,
-                        borderRadius: 4
+                        backgroundColor: colors.sal.bg,
+                        borderColor: colors.sal.border,
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        borderSkipped: false
                     }]
                 },
                 options: {
-                    ...chartDefaults,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
                     scales: {
                         x: { 
-                            title: { display: true, text: 'Salinity (PSU)', color: colors.text },
-                            ticks: { color: colors.text },
+                            title: { display: true, text: 'Salinity (PSU)', color: colors.text, font: { weight: 600 } },
+                            ticks: { color: colors.text, font: { size: 12 } },
                             grid: { color: colors.grid }
                         },
                         y: { 
-                            title: { display: true, text: 'Count', color: colors.text },
-                            ticks: { color: colors.text },
+                            title: { display: true, text: 'Count (thousands)', color: colors.text, font: { weight: 600 } },
+                            ticks: { color: colors.text, font: { size: 12 } },
                             grid: { color: colors.grid }
                         }
                     }
                 }
             });
             
-            // Timeline - only create once
-            if (!timelineChart) {
-                timelineChart = new Chart(document.getElementById('timelineChart'), {
-                    type: 'line',
+            // Timeline Chart
+            timelineChart = new Chart(document.getElementById('timelineChart'), {
+                type: 'line',
                 data: {
                     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
                     datasets: [{
-                        data: [120, 145, 180, 210, 195, 220, 250, 235, 205, 180, 160, 140],
-                        borderColor: '#06b6d4',
-                        backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                        data: [85, 92, 105, 118, 125, 140, 155, 148, 132, 115, 98, 88],
+                        borderColor: colors.timeline.border,
+                        backgroundColor: colors.timeline.bg,
                         tension: 0.4,
                         fill: true,
-                        pointRadius: 4,
-                        pointBackgroundColor: '#06b6d4'
+                        pointRadius: 5,
+                        pointHoverRadius: 8,
+                        pointBackgroundColor: colors.timeline.border,
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        borderWidth: 3
                     }]
                 },
                 options: {
-                    ...chartDefaults,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
                     scales: {
                         x: { 
-                            ticks: { color: colors.text },
+                            ticks: { color: colors.text, font: { size: 12 } },
                             grid: { color: colors.grid }
                         },
                         y: { 
-                            title: { display: true, text: 'Observations', color: colors.text },
-                            ticks: { color: colors.text },
+                            title: { display: true, text: 'Observations (K)', color: colors.text, font: { weight: 600 } },
+                            ticks: { color: colors.text, font: { size: 12 } },
                             grid: { color: colors.grid }
                         }
                     }
                 }
             });
-            }
             
-            // Regional Coverage - only create once
-            if (!regionChart) {
-                regionChart = new Chart(document.getElementById('regionChart'), {
+            // Regional Coverage Doughnut
+            regionChart = new Chart(document.getElementById('regionChart'), {
                 type: 'doughnut',
                 data: {
-                    labels: ['Bay of Bengal', 'Arabian Sea', 'Central Indian Ocean', 'Other'],
+                    labels: ['Bay of Bengal', 'Arabian Sea', 'Pacific Ocean', 'Indian Ocean', 'Atlantic', 'Other'],
                     datasets: [{
-                        data: [35, 30, 25, 10],
+                        data: [28, 22, 20, 15, 10, 5],
                         backgroundColor: [
-                            'rgba(59, 130, 246, 0.8)',
-                            'rgba(6, 182, 212, 0.8)',
-                            'rgba(139, 92, 246, 0.8)',
-                            'rgba(100, 116, 139, 0.8)'
+                            'rgba(59, 130, 246, 0.85)',
+                            'rgba(6, 182, 212, 0.85)',
+                            'rgba(139, 92, 246, 0.85)',
+                            'rgba(34, 197, 94, 0.85)',
+                            'rgba(249, 115, 22, 0.85)',
+                            'rgba(100, 116, 139, 0.85)'
                         ],
-                        borderColor: 'transparent',
-                        borderWidth: 0
+                        borderWidth: 0,
+                        hoverOffset: 12
                     }]
                 },
                 options: {
-                    ...chartDefaults,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
                     plugins: {
                         legend: {
                             display: true,
                             position: 'bottom',
                             labels: {
                                 color: colors.text,
-                                padding: 15,
-                                usePointStyle: true
+                                padding: 20,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: { size: 12, weight: 500 }
                             }
                         }
                     }
                 }
             });
-            }
+            
+            window.chartsLoaded = true;
         }
         
-        // Load on page ready
-        document.addEventListener('DOMContentLoaded', loadDashboardData);
+        // Initial load
+        document.addEventListener('DOMContentLoaded', () => loadDashboardData());
     </script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -58,6 +58,29 @@
             background: var(--bg-hover);
             border-color: var(--accent);
         }
+        
+        /* Theme Toggle for Map Page */
+        .theme-toggle-map {
+            position: relative;
+            overflow: hidden;
+            padding: 10px !important;
+            border-radius: 50% !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        .theme-toggle-map:hover {
+            transform: rotate(15deg);
+        }
+        
+        .theme-toggle-map .sun-icon,
+        .theme-toggle-map .moon-icon {
+            transition: all 0.3s ease;
+        }
+        
+        [data-theme="dark"] .theme-toggle-map .sun-icon { display: block; }
+        [data-theme="dark"] .theme-toggle-map .moon-icon { display: none; }
+        [data-theme="light"] .theme-toggle-map .sun-icon { display: none; }
+        [data-theme="light"] .theme-toggle-map .moon-icon { display: block; }
         
         .map-instructions {
             flex: 1;
@@ -969,6 +992,23 @@
                     </svg>
                     Click anywhere on the map to find nearby ARGO floats and view their data
                 </div>
+                <!-- Theme Toggle -->
+                <button class="back-btn theme-toggle-map" id="themeToggle" title="Toggle dark/light mode">
+                    <svg class="sun-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg class="moon-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
             </div>
             
             <!-- Status -->
@@ -1158,6 +1198,29 @@
             viewProfileBtn: $('viewProfileBtn'),
             exportBtn: $('exportBtn')
         };
+        
+        // Theme Management
+        const THEME_KEY = 'floatchart_theme';
+        
+        function initTheme() {
+            const saved = localStorage.getItem(THEME_KEY);
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = saved || (prefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+        
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem(THEME_KEY, next);
+        }
+        
+        // Initialize theme immediately
+        initTheme();
+        
+        // Theme toggle button listener
+        document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
         
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
