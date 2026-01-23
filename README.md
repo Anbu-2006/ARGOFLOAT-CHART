@@ -273,23 +273,77 @@ curl -X POST https://argofloat-chart.onrender.com/api/query \
 
 ## Deployment
 
-### Render (Recommended)
+### 🎓 Students: GitHub Student Developer Pack (Best Option)
 
-1. Fork this repo
-2. Create a new Web Service on [Render](https://render.com)
-3. Connect your GitHub repo
-4. Set environment variables in Render dashboard
-5. Deploy
+If you have a student email (.edu, .ac.in, etc.) or student ID, get free premium hosting!
 
-The included `Procfile` handles the rest.
+1. Go to [education.github.com/pack](https://education.github.com/pack)
+2. Click **Get Student Benefits** → Verify with student email or ID
+3. Once approved, you get:
+   - **Railway**: $5/month free (no card needed!)
+   - **DigitalOcean**: $200 free credits
+   - **Azure**: $100 free credits
 
-### Other Platforms
+Then deploy on Railway:
+1. [railway.app](https://railway.app) → Sign in with GitHub
+2. New Project → Deploy from GitHub → Select this repo
+3. Set root directory: `ARGO_CHATBOT`
+4. Add env vars: `DATABASE_URL`, `GROQ_API_KEY`
+5. Deploy!
 
-Works with any platform that supports Python/Flask:
-- Heroku
-- Railway
-- DigitalOcean App Platform
-- Your own VPS
+---
+
+### Hugging Face Spaces (Free, No Card, Fast)
+
+Best free option without student verification.
+
+**Step 1: Create Account**
+1. Go to [huggingface.co](https://huggingface.co/) → Sign Up (free, no card)
+2. Verify your email
+
+**Step 2: Create New Space**
+1. Go to [huggingface.co/new-space](https://huggingface.co/new-space)
+2. Fill in:
+   - **Space name**: `floatchart`
+   - **License**: MIT
+   - **SDK**: Select **Docker**
+   - **Hardware**: CPU basic (free)
+3. Click **Create Space**
+
+**Step 3: Upload Files**
+1. Click **Files** tab → **Add file** → **Upload files**
+2. Upload these from your project:
+   - `Dockerfile` (from root)
+   - `ARGO_CHATBOT/` folder (entire folder)
+3. Or use Git:
+   ```bash
+   git clone https://huggingface.co/spaces/YOUR_USERNAME/floatchart
+   # Copy your files
+   git add . && git commit -m "Initial" && git push
+   ```
+
+**Step 4: Add Secrets (Environment Variables)**
+1. Go to **Settings** → **Repository secrets**
+2. Add:
+   - `DATABASE_URL` = your Supabase connection string
+   - `GROQ_API_KEY` = your Groq API key
+
+**Step 5: Deploy**
+- It auto-deploys when you push files
+- Wait ~2-3 minutes for build
+- Your app: `https://huggingface.co/spaces/YOUR_USERNAME/floatchart`
+
+---
+
+### Platform Comparison
+
+| Platform | Card Required | Cold Start | Performance | Best For |
+|----------|--------------|------------|-------------|----------|
+| **Railway (Student)** | ❌ No | None | ⭐⭐⭐⭐⭐ | Students |
+| **Hugging Face** | ❌ No | ~10s | ⭐⭐⭐⭐ | Everyone |
+| Render + UptimeRobot | ❌ No | None* | ⭐⭐⭐ | Backup |
+
+*With UptimeRobot pinging every 5 minutes
 
 ---
 
