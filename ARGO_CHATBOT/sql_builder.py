@@ -250,7 +250,8 @@ def _build_trajectory_query(intent: dict, db_context: dict, existing_cols=None) 
     select_cols = list(dict.fromkeys(select_cols))
     if not select_cols:
         select_cols = base_cols
-    return f'SELECT {", ".join([f'"{c}"' for c in select_cols])} FROM argo_data WHERE "float_id" = {float_id} AND {time_clause} ORDER BY "timestamp" ASC;'
+    cols_str = ", ".join([f'"{c}"' for c in select_cols])
+    return f'SELECT {cols_str} FROM argo_data WHERE "float_id" = {float_id} AND {time_clause} ORDER BY "timestamp" ASC;'
 
 def _build_scatter_query(intent: dict, db_context: dict, existing_cols=None) -> str:
     metrics = intent.get("metrics") or []
@@ -263,7 +264,9 @@ def _build_scatter_query(intent: dict, db_context: dict, existing_cols=None) -> 
     time_clause = _get_time_clause(intent.get("time_constraint"), db_context.get("max_date_obj"))
     base_query_from = f"FROM argo_data WHERE {location_clause} AND {time_clause}"
     non_null_clauses = [f'"{m}" IS NOT NULL' for m in metrics]
-    return f"SELECT {', '.join(select_cols)} {base_query_from} AND {' AND '.join(non_null_clauses)} LIMIT 1000;"
+    cols_str = ', '.join(select_cols)
+    null_str = ' AND '.join(non_null_clauses)
+    return f"SELECT {cols_str} {base_query_from} AND {null_str} LIMIT 1000;"
 
 def _build_general_query(intent: dict, db_context: dict) -> str:
     location_clause = intent.get("location_clause", "1=1")
