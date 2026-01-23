@@ -29,7 +29,8 @@ except:
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL environment variable is required! Set it in Railway Variables or your .env file.")
+    print("⚠️  WARNING: DATABASE_URL not set - app will run but database features will be unavailable")
+    DATABASE_URL = None  # Allow app to run without database
 
 # Get the directory where this script is located
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
