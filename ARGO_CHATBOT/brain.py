@@ -399,6 +399,111 @@ SUMMARIZATION_PROMPT = """You are a senior oceanographic data scientist providin
 
 ## GENERATE PROFESSIONAL RESPONSE:"""
 
+
+# ------------------------------------------------------------------
+# Conversational Handler - Handle greetings and simple messages
+# ------------------------------------------------------------------
+
+def handle_conversational_query(question: str):
+    """
+    Handle simple conversational queries that don't need database access.
+    Returns a response dict if it's a conversational query, None otherwise.
+    """
+    question_lower = question.strip().lower()
+    question_clean = re.sub(r'[^\w\s]', '', question_lower)  # Remove punctuation
+    
+    # Greeting patterns
+    greetings = ['hello', 'hi', 'hey', 'hola', 'greetings', 'good morning', 'good afternoon', 
+                 'good evening', 'howdy', 'sup', 'whats up', "what's up", 'yo']
+    
+    # Help/info patterns
+    help_patterns = ['help', 'what can you do', 'how do i use', 'how does this work',
+                     'what is this', 'capabilities', 'features', 'commands']
+    
+    # About patterns
+    about_patterns = ['who are you', 'what are you', 'tell me about yourself', 
+                      'introduce yourself', 'your name']
+    
+    # Thanks patterns
+    thanks_patterns = ['thank', 'thanks', 'thx', 'appreciate', 'grateful']
+    
+    # Goodbye patterns
+    bye_patterns = ['bye', 'goodbye', 'see you', 'later', 'cya', 'take care']
+    
+    # Check greetings
+    if any(greet in question_clean for greet in greetings) and len(question_clean.split()) <= 5:
+        return {
+            "query_type": "Conversation",
+            "summary": "👋 Hello! I'm FloatChart, your ocean data assistant. I can help you explore ARGO float data from around the world.\n\n**Try asking me:**\n• \"Show floats near Chennai\"\n• \"Average temperature in Bay of Bengal\"\n• \"Trajectory of float 2902115\"\n• \"Salinity trends in 2024\"\n\nWhat would you like to know about the ocean? 🌊",
+            "data": [],
+            "chart_type": None
+        }
+    
+    # Check help requests
+    if any(help_word in question_clean for help_word in help_patterns):
+        return {
+            "query_type": "Conversation",
+            "summary": """🔍 **How to use FloatChart:**
+
+**📍 Find floats by location:**
+• "Floats near Mumbai"
+• "Nearest 5 floats to Chennai"
+• "Data from Arabian Sea"
+
+**📊 Get statistics:**
+• "Average temperature in Bay of Bengal"
+• "Maximum salinity in Indian Ocean 2024"
+• "How many floats in Pacific?"
+
+**🛤️ Track float movements:**
+• "Trajectory of float 2902115"
+• "Path of float 2903847"
+
+**📈 Analyze trends:**
+• "Temperature trends in 2024"
+• "Salinity vs temperature in Mediterranean"
+
+**💡 Tips:**
+• Be specific about regions and time periods
+• Use float IDs for trajectory tracking
+• Ask about temperature, salinity, pressure, depth
+
+What would you like to explore? 🌊""",
+            "data": [],
+            "chart_type": None
+        }
+    
+    # Check about/identity
+    if any(about in question_clean for about in about_patterns):
+        return {
+            "query_type": "Conversation",
+            "summary": "🌊 I'm **FloatChart**, an AI assistant for exploring oceanographic data from the global ARGO float network.\n\n**What I can do:**\n• Query 1.5M+ ocean measurements\n• Find floats by location\n• Show float trajectories\n• Analyze temperature & salinity patterns\n• Create visualizations\n\nThe data comes from ARGO floats - autonomous instruments measuring the world's oceans. Ask me anything about ocean data! 🔬",
+            "data": [],
+            "chart_type": None
+        }
+    
+    # Check thanks
+    if any(thank in question_clean for thank in thanks_patterns) and len(question_clean.split()) <= 6:
+        return {
+            "query_type": "Conversation",
+            "summary": "You're welcome! 😊 Feel free to ask more questions about ocean data anytime. Happy exploring! 🌊",
+            "data": [],
+            "chart_type": None
+        }
+    
+    # Check goodbye
+    if any(bye in question_clean for bye in bye_patterns) and len(question_clean.split()) <= 5:
+        return {
+            "query_type": "Conversation",
+            "summary": "Goodbye! 👋 Thanks for exploring the ocean with FloatChart. Come back anytime to dive into more data! 🌊🐠",
+            "data": [],
+            "chart_type": None
+        }
+    
+    # Not a conversational query - proceed with normal processing
+    return None
+
+
 def get_intelligent_answer(user_question: str):
     """
     Main function to process user questions and return intelligent answers.
@@ -408,6 +513,11 @@ def get_intelligent_answer(user_question: str):
     logging.basicConfig(filename="backend.log", level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     
     start_time = time.time()
+    
+    # === STEP 0: Check for simple conversational messages ===
+    conversational_response = handle_conversational_query(user_question)
+    if conversational_response:
+        return conversational_response
     
     try:
         load_dotenv()
