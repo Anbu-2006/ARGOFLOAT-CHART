@@ -12,3 +12,4 @@ Release notes and development milestones.
 - [2026-03-20 19:40] style(hud): design marine dark UI with high-contrast depth gradient scales
 - [2026-03-20 21:05] test(parser): assert NetCDF variable extraction and missing value handling
 - [2026-03-21 09:20] docs(data): document ARGO global ocean observing program data format
+- [2026-03-21 10:59] feat(ocean): implement 3D oceanographic profile renderer for ARGO float trajectory data
