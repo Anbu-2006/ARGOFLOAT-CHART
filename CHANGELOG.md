@@ -46,3 +46,4 @@ Release notes and development milestones.
 - [2026-03-26 12:09] feat(data): parse NetCDF salinity, temperature, and depth profiles from oceanic sensors
 - [2026-03-26 13:26] feat(leaflet): integrate interactive bathymetry map with float trajectory paths
 - [2026-03-26 14:43] perf(webgl): optimize point cloud rendering for 50,000+ oceanic measurement coordinates
+- [2026-03-26 16:00] fix(projection): resolve latitude/longitude coordinate clipping at antimeridian
