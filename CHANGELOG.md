@@ -68,3 +68,4 @@ Release notes and development milestones.
 - [2026-03-28 19:32] perf(webgl): optimize point cloud rendering for 50,000+ oceanic measurement coordinates
 - [2026-03-28 20:56] fix(projection): resolve latitude/longitude coordinate clipping at antimeridian
 - [2026-03-29 09:18] feat(timeseries): add dual-axis thermocline and halocline depth variation charts
+- [2026-03-29 09:54] feat(filter): filter profiles by WMO platform number, date range, and sensor QC flags
