@@ -103,3 +103,4 @@ Release notes and development milestones.
 - [2026-03-31 13:59] test(parser): assert NetCDF variable extraction and missing value handling
 - [2026-03-31 14:50] docs(data): document ARGO global ocean observing program data format
 - [2026-03-31 15:41] feat(ocean): implement 3D oceanographic profile renderer for ARGO float trajectory data
+- [2026-03-31 16:32] feat(data): parse NetCDF salinity, temperature, and depth profiles from oceanic sensors
