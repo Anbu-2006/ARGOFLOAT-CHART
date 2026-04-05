@@ -154,3 +154,4 @@ Release notes and development milestones.
 - [2026-04-03 20:57] docs(data): document ARGO global ocean observing program data format
 - [2026-04-03 21:27] feat(ocean): implement 3D oceanographic profile renderer for ARGO float trajectory data
 - [2026-04-03 21:57] feat(data): parse NetCDF salinity, temperature, and depth profiles from oceanic sensors
+- [2026-04-05 09:33] feat(leaflet): integrate interactive bathymetry map with float trajectory paths
