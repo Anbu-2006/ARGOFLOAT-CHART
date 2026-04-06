@@ -177,3 +177,4 @@ Release notes and development milestones.
 - [2026-04-05 22:07] feat(leaflet): integrate interactive bathymetry map with float trajectory paths
 - [2026-04-06 09:41] perf(webgl): optimize point cloud rendering for 50,000+ oceanic measurement coordinates
 - [2026-04-06 11:06] fix(projection): resolve latitude/longitude coordinate clipping at antimeridian
+- [2026-04-06 12:32] feat(timeseries): add dual-axis thermocline and halocline depth variation charts
