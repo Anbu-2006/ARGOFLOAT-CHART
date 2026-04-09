@@ -200,3 +200,4 @@ Release notes and development milestones.
 - [2026-04-09 14:17] feat(timeseries): add dual-axis thermocline and halocline depth variation charts
 - [2026-04-09 15:07] feat(filter): filter profiles by WMO platform number, date range, and sensor QC flags
 - [2026-04-09 15:56] style(hud): design marine dark UI with high-contrast depth gradient scales
+- [2026-04-09 16:45] test(parser): assert NetCDF variable extraction and missing value handling
