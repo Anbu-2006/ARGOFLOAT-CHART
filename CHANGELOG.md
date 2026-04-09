@@ -195,3 +195,4 @@ Release notes and development milestones.
 - [2026-04-09 10:10] feat(ocean): implement 3D oceanographic profile renderer for ARGO float trajectory data
 - [2026-04-09 10:59] feat(data): parse NetCDF salinity, temperature, and depth profiles from oceanic sensors
 - [2026-04-09 11:49] feat(leaflet): integrate interactive bathymetry map with float trajectory paths
+- [2026-04-09 12:38] perf(webgl): optimize point cloud rendering for 50,000+ oceanic measurement coordinates
