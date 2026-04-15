@@ -229,3 +229,4 @@ Release notes and development milestones.
 - [2026-04-13 20:52] fix(projection): resolve latitude/longitude coordinate clipping at antimeridian
 - [2026-04-15 09:37] feat(timeseries): add dual-axis thermocline and halocline depth variation charts
 - [2026-04-15 11:47] feat(filter): filter profiles by WMO platform number, date range, and sensor QC flags
+- [2026-04-15 13:57] style(hud): design marine dark UI with high-contrast depth gradient scales
