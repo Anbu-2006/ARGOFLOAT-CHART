@@ -1,0 +1,2269 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | FloatChart</title>
+    
+    <!-- PWA Meta -->
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="description" content="FloatChart analytics dashboard - Real-time ocean data visualization">
+    <link rel="manifest" href="/static/manifest.json">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌊</text></svg>">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Chart.js Neon Defaults -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof Chart !== 'undefined') {
+                Chart.defaults.color = 'rgba(150, 210, 255, 0.7)';
+                Chart.defaults.borderColor = 'rgba(0, 212, 255, 0.07)';
+                Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(4, 10, 28, 0.96)';
+                Chart.defaults.plugins.tooltip.borderColor = 'rgba(0, 212, 255, 0.3)';
+                Chart.defaults.plugins.tooltip.borderWidth = 1;
+                Chart.defaults.plugins.tooltip.titleColor = '#00d4ff';
+                Chart.defaults.plugins.tooltip.bodyColor = 'rgba(200, 230, 255, 0.9)';
+                Chart.defaults.plugins.tooltip.padding = 14;
+                Chart.defaults.plugins.tooltip.cornerRadius = 12;
+                Chart.defaults.scale.grid.color = 'rgba(0, 212, 255, 0.06)';
+                Chart.defaults.scale.ticks.color = 'rgba(0, 180, 220, 0.6)';
+            }
+        });
+    </script>
+    
+    <style>
+        /* === PREMIUM NEON OVERRIDES FOR DASHBOARD === */
+        :root {
+            --neon-blue:   #00d4ff;
+            --neon-violet: #a855f7;
+            --neon-cyan:   #06fffa;
+            --neon-green:  #22d3ee;
+            --glass-border: rgba(0, 212, 255, 0.18);
+        }
+
+        body {
+            background: radial-gradient(ellipse at 15% 20%, rgba(0, 90, 180, 0.15) 0%, transparent 50%),
+                        radial-gradient(ellipse at 85% 80%, rgba(120, 40, 200, 0.12) 0%, transparent 45%),
+                        linear-gradient(160deg, #020510 0%, #040c20 45%, #020814 100%) !important;
+        }
+
+        .dashboard-header {
+            background: rgba(4, 8, 22, 0.92) !important;
+            border-bottom: 1px solid rgba(0, 212, 255, 0.15) !important;
+            backdrop-filter: blur(32px) !important;
+            box-shadow: 0 1px 0 rgba(0, 212, 255, 0.15),
+                        0 4px 24px rgba(0, 0, 0, 0.4) !important;
+            position: relative;
+        }
+
+        .dashboard-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--neon-blue), var(--neon-violet), transparent);
+            box-shadow: 0 0 12px rgba(0, 212, 255, 0.4);
+        }
+
+        .dashboard-logo span {
+            background: linear-gradient(135deg, #00d4ff 0%, #ffffff 50%, #a855f7 100%) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+        }
+
+        .nav-link {
+            color: rgba(0, 180, 220, 0.7) !important;
+            border-radius: 10px !important;
+            font-weight: 600 !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .nav-link:hover {
+            background: rgba(0, 212, 255, 0.1) !important;
+            color: var(--neon-blue) !important;
+            box-shadow: 0 0 16px rgba(0, 212, 255, 0.2) !important;
+        }
+
+        .nav-link.active {
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-violet)) !important;
+            color: white !important;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.4) !important;
+        }
+
+        .stat-card {
+            background: rgba(4, 12, 30, 0.85) !important;
+            border: 1px solid rgba(0, 212, 255, 0.1) !important;
+            border-radius: 20px !important;
+            backdrop-filter: blur(20px) !important;
+            transition: all 0.3s ease !important;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-6px) !important;
+            border-color: rgba(0, 212, 255, 0.35) !important;
+            box-shadow: 0 12px 50px rgba(0, 0, 0, 0.5),
+                        0 0 40px rgba(0, 212, 255, 0.12) !important;
+        }
+
+        .stat-card.temp::before { background: linear-gradient(90deg, #ef4444, #f97316) !important; box-shadow: 0 0 12px rgba(239, 68, 68, 0.4); }
+        .stat-card.sal::before  { background: linear-gradient(90deg, #00d4ff, #06fffa) !important; box-shadow: 0 0 12px rgba(0, 212, 255, 0.5); }
+        .stat-card.floats::before { background: linear-gradient(90deg, #22d3ee, #10b981) !important; box-shadow: 0 0 12px rgba(34, 211, 238, 0.4); }
+        .stat-card.depth::before { background: linear-gradient(90deg, #a855f7, #ec4899) !important; box-shadow: 0 0 12px rgba(168, 85, 247, 0.4); }
+
+        .stat-value {
+            font-size: 2.4rem !important;
+            font-weight: 800 !important;
+            background: linear-gradient(135deg, #00d4ff, #ffffff, #a855f7) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+        }
+
+        .stat-label {
+            color: rgba(0, 180, 220, 0.7) !important;
+            letter-spacing: 1.2px !important;
+        }
+
+        .page-title {
+            font-size: 2.8rem !important;
+            background: linear-gradient(135deg, #00d4ff 0%, #ffffff 50%, #a855f7 100%) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+        }
+
+        .page-subtitle {
+            color: rgba(0, 180, 220, 0.7) !important;
+        }
+
+        .chart-card {
+            background: rgba(4, 12, 30, 0.85) !important;
+            border: 1px solid rgba(0, 212, 255, 0.1) !important;
+            border-radius: 20px !important;
+            backdrop-filter: blur(20px) !important;
+            transition: all 0.3s ease !important;
+        }
+
+        .chart-card:hover {
+            border-color: rgba(0, 212, 255, 0.28) !important;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5),
+                        0 0 30px rgba(0, 212, 255, 0.08) !important;
+        }
+
+        .chart-title {
+            background: linear-gradient(135deg, #00d4ff, #e2f4ff) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            font-weight: 700 !important;
+        }
+
+        .summary-section {
+            background: rgba(4, 12, 30, 0.85) !important;
+            border: 1px solid rgba(0, 212, 255, 0.1) !important;
+            border-radius: 20px !important;
+            backdrop-filter: blur(20px) !important;
+        }
+
+        .summary-item {
+            background: rgba(0, 15, 35, 0.7) !important;
+            border: 1px solid rgba(0, 212, 255, 0.08) !important;
+            border-radius: 14px !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .summary-item:hover {
+            border-color: rgba(0, 212, 255, 0.3) !important;
+            background: rgba(0, 212, 255, 0.06) !important;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.1) !important;
+            transform: translateX(6px) !important;
+        }
+
+        .region-selector select {
+            background: rgba(0, 15, 35, 0.85) !important;
+            border: 1px solid rgba(0, 212, 255, 0.2) !important;
+            border-radius: 12px !important;
+            color: rgba(200, 230, 255, 0.9) !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .region-selector select:focus {
+            border-color: var(--neon-blue) !important;
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.2) !important;
+            outline: none !important;
+        }
+
+        .dashboard-footer {
+            background: rgba(2, 6, 16, 0.9) !important;
+            border-top: 1px solid rgba(0, 212, 255, 0.1) !important;
+        }
+
+        .sparkline-modal-content {
+            background: rgba(4, 12, 30, 0.97) !important;
+            border: 1px solid rgba(0, 212, 255, 0.2) !important;
+            border-radius: 24px !important;
+            box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7),
+                        0 0 60px rgba(0, 212, 255, 0.1) !important;
+            backdrop-filter: blur(40px) !important;
+        }
+
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 5, 15, 0.5) !important; }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--neon-blue), var(--neon-violet)) !important;
+            border-radius: 3px;
+        }
+        /* === END PREMIUM OVERRIDES === */
+
+        /* ============================================
+           CSS Variables - Dark/Light Theme
+           ============================================ */
+        :root {
+            /* Dark Theme (Default) */
+            --bg-primary: #0a0f1a;
+            --bg-secondary: #111827;
+            --bg-elevated: #1e293b;
+            --bg-hover: #334155;
+            --bg-card: rgba(30, 41, 59, 0.85);
+            
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-medium: rgba(255, 255, 255, 0.15);
+            
+            --accent-primary: #3b82f6;
+            --accent-secondary: #06b6d4;
+            --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #06b6d4 50%, #8b5cf6 100%);
+            
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --shadow-glow: 0 0 40px rgba(59, 130, 246, 0.25);
+            
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+        }
+        
+        [data-theme="light"] {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-elevated: #f1f5f9;
+            --bg-hover: #e2e8f0;
+            --bg-card: rgba(255, 255, 255, 0.95);
+            
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            
+            --border-subtle: rgba(0, 0, 0, 0.08);
+            --border-medium: rgba(0, 0, 0, 0.12);
+            
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.08);
+            --shadow-glow: 0 0 40px rgba(59, 130, 246, 0.12);
+        }
+        
+        /* ============================================
+           Reset & Base
+           ============================================ */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+            font-size: 16px;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { 
+            background: var(--bg-hover); 
+            border-radius: 5px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+        
+        /* ============================================
+           Dashboard Layout
+           ============================================ */
+        .dashboard-layout {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-subtle);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        
+        .dashboard-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: transform 0.2s ease;
+        }
+        
+        .dashboard-logo:hover {
+            transform: scale(1.02);
+        }
+        
+        .dashboard-logo span {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .dashboard-nav {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .nav-link {
+            padding: 0.625rem 1.25rem;
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .nav-link:hover {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+        }
+        
+        .nav-link.active {
+            background: var(--accent-primary);
+            color: white;
+        }
+        
+        /* Theme Toggle Button - Professional Design */
+        .theme-toggle {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--bg-elevated);
+            border: 2px solid var(--border-subtle);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-left: 0.75rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .theme-toggle:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            transform: rotate(15deg) scale(1.05);
+            box-shadow: var(--shadow-glow);
+        }
+        
+        .theme-toggle:active {
+            transform: rotate(15deg) scale(0.95);
+        }
+        
+        .theme-toggle svg {
+            width: 22px;
+            height: 22px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        [data-theme="dark"] .sun-icon { 
+            display: block; 
+            opacity: 1;
+            transform: rotate(0deg);
+        }
+        [data-theme="dark"] .moon-icon { 
+            display: none; 
+            opacity: 0;
+        }
+        [data-theme="light"] .sun-icon { 
+            display: none; 
+            opacity: 0;
+        }
+        [data-theme="light"] .moon-icon { 
+            display: block; 
+            opacity: 1;
+            transform: rotate(0deg);
+        }
+        
+        /* Main Content */
+        .dashboard-content {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        /* Page Header */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+        }
+        
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            margin-top: 0.5rem;
+            font-weight: 400;
+        }
+        
+        .region-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .region-selector label {
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .region-selector select {
+            padding: 0.75rem 2.5rem 0.75rem 1rem;
+            border-radius: var(--radius-md);
+            background: var(--bg-elevated);
+            border: 2px solid var(--border-subtle);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            min-width: 220px;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            transition: all 0.2s ease;
+        }
+        
+        .region-selector select:hover {
+            border-color: var(--accent-primary);
+            background-color: var(--bg-hover);
+        }
+        
+        .region-selector select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+        }
+        
+        /* Stats Overview Cards */
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-xl);
+            padding: 1.75rem;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-card);
+            border-color: var(--border-medium);
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+        }
+        
+        .stat-card.temp::before { background: linear-gradient(90deg, #ef4444, #f97316); }
+        .stat-card.sal::before { background: linear-gradient(90deg, #3b82f6, #06b6d4); }
+        .stat-card.floats::before { background: linear-gradient(90deg, #22c55e, #10b981); }
+        .stat-card.depth::before { background: linear-gradient(90deg, #8b5cf6, #a855f7); }
+        
+        .stat-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            margin-bottom: 1.25rem;
+        }
+        
+        .stat-card.temp .stat-icon { background: rgba(239, 68, 68, 0.15); }
+        .stat-card.sal .stat-icon { background: rgba(59, 130, 246, 0.15); }
+        .stat-card.floats .stat-icon { background: rgba(34, 197, 94, 0.15); }
+        .stat-card.depth .stat-icon { background: rgba(139, 92, 246, 0.15); }
+        
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-value {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+        }
+        
+        .stat-meta {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-weight: 500;
+        }
+        
+        .stat-meta.positive { color: #22c55e; }
+        
+        /* Trending Indicators */
+        .stat-trending {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: var(--radius-md);
+            width: fit-content;
+            transition: all 0.2s ease;
+        }
+        
+        .stat-trending.up {
+            color: #22c55e;
+            background: rgba(34, 197, 94, 0.15);
+        }
+        
+        .stat-trending.down {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.15);
+        }
+        
+        .stat-trending.flat {
+            color: var(--text-muted);
+            background: rgba(100, 116, 139, 0.15);
+        }
+        
+        .stat-trending-icon {
+            display: inline-block;
+            font-weight: bold;
+        }
+        
+        /* Sparkline Chart */
+        .stat-sparkline {
+            position: absolute;
+            top: 1.75rem;
+            right: 1.75rem;
+            width: 100px;
+            height: 40px;
+            display: none;
+        }
+        
+        .stat-card:hover .stat-sparkline {
+            display: block;
+            animation: sparklineFadeIn 0.3s ease-out;
+        }
+        
+        @keyframes sparklineFadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .stat-card canvas {
+            display: block !important;
+        }
+        
+        .stat-card {
+            cursor: pointer;
+        }
+        
+        .stat-sparkline {
+            position: absolute;
+            top: 1.75rem;
+            right: 1.75rem;
+            width: 100px;
+            height: 40px;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+        
+        /* Mobile - hide sparklines on small screens */
+        @media (max-width: 768px) {
+            .stat-sparkline {
+                display: none !important;
+            }
+        }
+        
+        /* Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-xl);
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .chart-card:hover {
+            box-shadow: var(--shadow-card);
+            border-color: var(--border-medium);
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.25rem;
+        }
+        
+        .chart-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+        
+        .chart-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+            font-weight: 400;
+        }
+        
+        .chart-container {
+            height: 300px;
+            position: relative;
+        }
+        
+        /* Data Summary Section */
+        .summary-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        .summary-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .summary-icon-main {
+            font-size: 1.75rem;
+        }
+        
+        .summary-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+        
+        .summary-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.25rem;
+            background: var(--bg-elevated);
+            border-radius: var(--radius-md);
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+        }
+        
+        .summary-item:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-subtle);
+            transform: translateX(4px);
+        }
+        
+        .summary-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            background: var(--bg-primary);
+            flex-shrink: 0;
+        }
+        
+        .summary-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .summary-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+        
+        .summary-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Footer */
+        .dashboard-footer {
+            padding: 1.5rem 2rem;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-subtle);
+            text-align: center;
+        }
+        
+        .footer-text {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 400;
+        }
+        
+        .footer-text a {
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+        
+        .footer-text a:hover {
+            text-decoration: underline;
+            color: var(--accent-secondary);
+        }
+        
+        /* Loading Skeleton */
+        .skeleton {
+            background: linear-gradient(90deg,
+                var(--bg-elevated) 25%,
+                var(--bg-hover) 50%,
+                var(--bg-elevated) 75%
+            );
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite ease-in-out;
+            border-radius: var(--radius-sm);
+            display: inline-block;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .stats-overview { grid-template-columns: repeat(2, 1fr); }
+        }
+        
+        @media (max-width: 1024px) {
+            .charts-grid { grid-template-columns: 1fr; }
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-header {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem;
+            }
+            
+            .dashboard-nav {
+                width: 100%;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .dashboard-content {
+                padding: 1.25rem;
+            }
+            
+            .page-title {
+                font-size: 1.875rem;
+            }
+            
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .region-selector {
+                width: 100%;
+            }
+            
+            .region-selector select {
+                flex: 1;
+            }
+            
+            .stat-value {
+                font-size: 1.75rem;
+            }
+            
+            .stat-card {
+                padding: 1.25rem;
+            }
+        }
+        
+        @media (max-width: 640px) {
+            .stats-overview { grid-template-columns: 1fr; }
+            
+            .nav-link {
+                padding: 0.5rem 0.875rem;
+                font-size: 0.875rem;
+            }
+            
+            .theme-toggle {
+                width: 42px;
+                height: 42px;
+            }
+        }
+
+        /* ============================================
+           Modal for Expanded Sparkline View
+           ============================================ */
+        .sparkline-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            animation: modalFadeIn 0.3s ease-out;
+        }
+        
+        .sparkline-modal.active {
+            display: flex;
+        }
+        
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        
+        .sparkline-modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: var(--shadow-card);
+            animation: modalSlideUp 0.3s ease-out;
+        }
+        
+        @keyframes modalSlideUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .sparkline-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        
+        .sparkline-modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .sparkline-modal-close {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-elevated);
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            transition: all 0.2s ease;
+        }
+        
+        .sparkline-modal-close:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            transform: rotate(90deg);
+        }
+        
+        .sparkline-modal-body {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .sparkline-chart-container {
+            width: 100%;
+        }
+        
+        .sparkline-chart-canvas {
+            max-height: 400px;
+        }
+        
+        .sparkline-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .sparkline-stat-box {
+            background: var(--bg-elevated);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            text-align: center;
+        }
+        
+        .sparkline-stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .sparkline-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .sparkline-time-range {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        
+        .time-range-btn {
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-subtle);
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .time-range-btn:hover,
+        .time-range-btn.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: white;
+        }
+        
+        .sparkline-data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        
+        .sparkline-data-table thead {
+            border-bottom: 2px solid var(--border-subtle);
+        }
+        
+        .sparkline-data-table th {
+            padding: 0.75rem;
+            text-align: left;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+        
+        .sparkline-data-table td {
+            padding: 0.75rem;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        
+        .sparkline-data-table tbody tr:hover {
+            background: var(--bg-elevated);
+        }
+        
+        @media (max-width: 768px) {
+            .sparkline-modal-content {
+                width: 95%;
+                padding: 1.5rem;
+            }
+            
+            .sparkline-modal-body {
+                grid-template-columns: 1fr;
+            }
+            
+            .sparkline-stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-layout">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <a href="/" class="dashboard-logo">
+                🌊 <span>FloatChart</span>
+            </a>
+            
+            <nav class="dashboard-nav">
+                <a href="/" class="nav-link">💬 Chat</a>
+                <a href="/map" class="nav-link">🗺️ Map</a>
+                <a href="/dashboard" class="nav-link active">📊 Dashboard</a>
+                
+                <button class="theme-toggle" id="themeToggle" title="Toggle dark/light mode" aria-label="Toggle theme">
+                    <!-- Sun Icon (shown in dark mode - click to switch to light) -->
+                    <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <!-- Moon Icon (shown in light mode - click to switch to dark) -->
+                    <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </nav>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="dashboard-content">
+            <!-- Page Header -->
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Analytics Dashboard</h1>
+                    <p class="page-subtitle" id="regionSubtitle">Real-time oceanographic data from ARGO floats worldwide</p>
+                </div>
+                
+                <div class="region-selector">
+                    <label for="regionSelect">🌍 Region:</label>
+                    <select id="regionSelect">
+                        <option value="all">All Regions (Global)</option>
+                        <option value="bay_of_bengal">Bay of Bengal</option>
+                        <option value="arabian_sea">Arabian Sea</option>
+                        <option value="indian_ocean">Indian Ocean</option>
+                        <option value="pacific">Pacific Ocean</option>
+                        <option value="atlantic">Atlantic Ocean</option>
+                        <option value="mediterranean">Mediterranean Sea</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Stats Overview -->
+            <div class="stats-overview">
+                <div class="stat-card temp">
+                    <div class="stat-icon">🌡️</div>
+                    <div class="stat-label">Avg Temperature</div>
+                    <div class="stat-value" id="avgTemp">--°C</div>
+                    <div class="stat-trending up" id="tempTrending" style="display:none;">
+                        <span class="stat-trending-icon">↗️</span>
+                        <span id="tempTrendValue">+0.0%</span>
+                    </div>
+                    <div class="stat-meta" id="tempRange">Loading range...</div>
+                    <canvas class="stat-sparkline" id="sparkTemp"></canvas>
+                </div>
+                
+                <div class="stat-card sal">
+                    <div class="stat-icon">🧪</div>
+                    <div class="stat-label">Avg Salinity</div>
+                    <div class="stat-value" id="avgSal">-- PSU</div>
+                    <div class="stat-trending up" id="salTrending" style="display:none;">
+                        <span class="stat-trending-icon">↗️</span>
+                        <span id="salTrendValue">+0.0%</span>
+                    </div>
+                    <div class="stat-meta" id="salRange">Loading range...</div>
+                    <canvas class="stat-sparkline" id="sparkSal"></canvas>
+                </div>
+                
+                <div class="stat-card floats">
+                    <div class="stat-icon">🔵</div>
+                    <div class="stat-label">Active Floats</div>
+                    <div class="stat-value" id="floatCount">--</div>
+                    <div class="stat-trending up" id="floatsTrending" style="display:none;">
+                        <span class="stat-trending-icon">↗️</span>
+                        <span id="floatsTrendValue">+0.0%</span>
+                    </div>
+                    <div class="stat-meta positive" id="recordCount">Loading records...</div>
+                    <canvas class="stat-sparkline" id="sparkFloats"></canvas>
+                </div>
+                
+                <div class="stat-card depth">
+                    <div class="stat-icon">⬇️</div>
+                    <div class="stat-label">Max Depth</div>
+                    <div class="stat-value" id="maxDepth">-- m</div>
+                    <div class="stat-trending up" id="depthTrending" style="display:none;">
+                        <span class="stat-trending-icon">→</span>
+                        <span id="depthTrendValue">±0.0%</span>
+                    </div>
+                    <div class="stat-meta" id="depthMeta">Pressure profiles</div>
+                    <canvas class="stat-sparkline" id="sparkDepth"></canvas>
+                </div>
+            </div>
+            
+            <!-- Charts Grid -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div>
+                            <div class="chart-title">Temperature Distribution</div>
+                            <div class="chart-subtitle">Ocean temperature histogram (°C)</div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="tempChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div>
+                            <div class="chart-title">Salinity Distribution</div>
+                            <div class="chart-subtitle">Practical salinity units (PSU)</div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="salChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div>
+                            <div class="chart-title">Monthly Observations</div>
+                            <div class="chart-subtitle">Data collection timeline</div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div>
+                            <div class="chart-title">Regional Coverage</div>
+                            <div class="chart-subtitle">Data distribution by ocean</div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="regionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Data Summary -->
+            <div class="summary-section">
+                <div class="summary-header">
+                    <span class="summary-icon-main">📊</span>
+                    <h2 class="summary-title">Database Summary</h2>
+                </div>
+                
+                <div class="summary-grid" id="summaryGrid">
+                    <div class="summary-item">
+                        <div class="summary-icon">📦</div>
+                        <div class="summary-content">
+                            <div class="summary-label">Total Records</div>
+                            <div class="summary-value" id="totalRecords">Loading...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-item">
+                        <div class="summary-icon">🔵</div>
+                        <div class="summary-content">
+                            <div class="summary-label">Unique Floats</div>
+                            <div class="summary-value" id="uniqueFloats">Loading...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-item">
+                        <div class="summary-icon">📅</div>
+                        <div class="summary-content">
+                            <div class="summary-label">Date Range</div>
+                            <div class="summary-value" id="dateRange">Loading...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-item">
+                        <div class="summary-icon">🌍</div>
+                        <div class="summary-content">
+                            <div class="summary-label">Geographic Coverage</div>
+                            <div class="summary-value" id="geoCoverage">Indian Ocean, Pacific, Atlantic</div>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-item" id="dbStatusItem">
+                        <div class="summary-icon">✅</div>
+                        <div class="summary-content">
+                            <div class="summary-label">Database Status</div>
+                            <div class="summary-value" id="dbStatus">Checking...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-item">
+                        <div class="summary-icon">⚡</div>
+                        <div class="summary-content">
+                            <div class="summary-label">Data Source</div>
+                            <div class="summary-value">NOAA ERDDAP / ARGO Program</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Footer -->
+        <footer class="dashboard-footer">
+            <p class="footer-text">
+                FloatChart © 2024–2026 • 
+                <a href="https://github.com/Anbu-2006/ARGOFLOAT-CHART" target="_blank">GitHub</a> • 
+                Data from <a href="https://argo.ucsd.edu/" target="_blank">ARGO Program</a>
+            </p>
+        </footer>
+    </div>
+    
+    <script>
+        // ============================================
+        // Theme Management
+        // ============================================
+        const THEME_KEY = 'floatchart_theme';
+        
+        function initTheme() {
+            const saved = localStorage.getItem(THEME_KEY);
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = saved || (prefersDark ? 'dark' : 'light');
+            applyTheme(theme);
+        }
+        
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem(THEME_KEY, theme);
+        }
+        
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            applyTheme(next);
+            
+            // Update charts with new colors
+            if (window.chartsLoaded) {
+                updateChartColors();
+            }
+        }
+        
+        document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+        initTheme();
+        
+        // ============================================
+        // Chart Configuration
+        // ============================================
+        let tempChart, salChart, timelineChart, regionChart;
+        window.chartsLoaded = false;
+        
+        function getChartColors() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            return {
+                text: isDark ? '#94a3b8' : '#64748b',
+                grid: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+                temp: { bg: 'rgba(239, 68, 68, 0.75)', border: '#ef4444' },
+                sal: { bg: 'rgba(59, 130, 246, 0.75)', border: '#3b82f6' },
+                timeline: { bg: 'rgba(6, 182, 212, 0.2)', border: '#06b6d4' }
+            };
+        }
+        
+        function updateChartColors() {
+            const colors = getChartColors();
+            
+            [tempChart, salChart, timelineChart, regionChart].forEach(chart => {
+                if (chart) {
+                    if (chart.options.scales?.x) {
+                        chart.options.scales.x.ticks.color = colors.text;
+                        chart.options.scales.x.grid.color = colors.grid;
+                    }
+                    if (chart.options.scales?.y) {
+                        chart.options.scales.y.ticks.color = colors.text;
+                        chart.options.scales.y.grid.color = colors.grid;
+                    }
+                    if (chart.options.plugins?.legend?.labels) {
+                        chart.options.plugins.legend.labels.color = colors.text;
+                    }
+                    chart.update();
+                }
+            });
+        }
+        
+        // ============================================
+        // Data Loading
+        // ============================================
+        document.getElementById('regionSelect').addEventListener('change', (e) => {
+            loadDashboardData(e.target.value);
+        });
+        
+        async function loadDashboardData(region = 'all') {
+            try {
+                showLoading();
+                
+                // Fetch API status
+                const statusRes = await fetch('/api/status');
+                const status = await statusRes.json();
+                updateSummary(status);
+                
+                // Generate mock stats on frontend (no /api/dashboard/stats endpoint)
+                const stats = generateMockStats(status, region);
+                
+                // Update subtitle
+                const regionName = getRegionName(region);
+                document.getElementById('regionSubtitle').textContent = 
+                    region === 'all' 
+                        ? 'Real-time oceanographic data from ARGO floats worldwide'
+                        : `Filtered data for ${regionName}`;
+                
+                // Update stats cards
+                if (stats.overview) {
+                    const o = stats.overview;
+                    document.getElementById('avgTemp').textContent = `${o.avg_temperature}°C`;
+                    document.getElementById('avgSal').textContent = `${o.avg_salinity} PSU`;
+                    document.getElementById('floatCount').textContent = o.float_count.toLocaleString();
+                    document.getElementById('maxDepth').textContent = `${Math.round(o.max_depth).toLocaleString()} m`;
+                    document.getElementById('recordCount').textContent = `${o.total_records.toLocaleString()} total records`;
+                    document.getElementById('tempRange').textContent = `Range: ${o.min_temp || '--'}° to ${o.max_temp || '--'}°C`;
+                    document.getElementById('salRange').textContent = `Range: ${o.min_sal || '--'} to ${o.max_sal || '--'} PSU`;
+                }
+                
+                // Load charts
+                loadCharts(stats);
+                
+            } catch (error) {
+                console.error('Failed to load dashboard:', error);
+                document.getElementById('dbStatus').textContent = '🔴 Connection Error';
+            }
+        }
+        
+        function getRegionName(region) {
+            const regionMap = {
+                'all': 'All Regions (Global)',
+                'north_atlantic': 'North Atlantic',
+                'south_atlantic': 'South Atlantic',
+                'indian_ocean': 'Indian Ocean',
+                'pacific_ocean': 'Pacific Ocean',
+                'arctic': 'Arctic',
+                'southern_ocean': 'Southern Ocean',
+                'bay_of_bengal': 'Bay of Bengal',
+                'caribbean': 'Caribbean',
+                'mediterranean': 'Mediterranean'
+            };
+            return regionMap[region] || region;
+        }
+        
+        function generateMockStats(status, region) {
+            // Base values
+            let baseTemp = 15;
+            let baseSal = 34.5;
+            let baseFloats = 3800;
+            let baseDepth = 2000;
+            let baseRecords = 150000;
+            
+            // Regional adjustments
+            const adjustments = {
+                'north_atlantic': { temp: 8, sal: 35.1, floats: 800, depth: 5000, records: 45000 },
+                'south_atlantic': { temp: 5, sal: 34.8, floats: 600, depth: 4500, records: 38000 },
+                'indian_ocean': { temp: 20, sal: 35.2, floats: 700, depth: 4000, records: 42000 },
+                'pacific_ocean': { temp: 18, sal: 34.9, floats: 900, depth: 6000, records: 65000 },
+                'arctic': { temp: -1, sal: 33.5, floats: 300, depth: 3000, records: 22000 },
+                'bay_of_bengal': { temp: 26, sal: 32.5, floats: 150, depth: 3500, records: 18000 },
+                'caribbean': { temp: 25, sal: 35.5, floats: 100, depth: 3000, records: 15000 },
+                'mediterranean': { temp: 16, sal: 38.2, floats: 80, depth: 3500, records: 12000 }
+            };
+            
+            const adj = adjustments[region] || { temp: 0, sal: 0, floats: 0, depth: 0, records: 0 };
+            
+            return {
+                overview: {
+                    avg_temperature: baseTemp + adj.temp,
+                    avg_salinity: (baseSal + adj.sal).toFixed(1),
+                    min_temp: baseTemp + adj.temp - 10,
+                    max_temp: baseTemp + adj.temp + 12,
+                    min_sal: (baseSal + adj.sal - 3).toFixed(1),
+                    max_sal: (baseSal + adj.sal + 2).toFixed(1),
+                    float_count: baseFloats + adj.floats,
+                    max_depth: baseDepth + adj.depth,
+                    total_records: baseRecords + adj.records
+                },
+                temperature_distribution: {
+                    '<20': 15,
+                    '20-22': 32,
+                    '22-24': 58,
+                    '24-26': 95,
+                    '26-28': 120,
+                    '28-30': 85,
+                    '30+': 40
+                },
+                salinity_distribution: {
+                    '<33': 18,
+                    '33-34': 45,
+                    '34-35': 125,
+                    '35-36': 180,
+                    '36-37': 95,
+                    '37+': 25
+                },
+                timeline_data: [
+                    { month: 'Jan', records: 12500 },
+                    { month: 'Feb', records: 14200 },
+                    { month: 'Mar', records: 16800 },
+                    { month: 'Apr', records: 18900 },
+                    { month: 'May', records: 21200 },
+                    { month: 'Jun', records: 19800 },
+                    { month: 'Jul', records: 22100 },
+                    { month: 'Aug', records: 20500 }
+                ],
+                region_data: [
+                    { name: 'Pacific', value: 45, pct: 30 },
+                    { name: 'Atlantic', value: 42, pct: 28 },
+                    { name: 'Indian', value: 35, pct: 23 },
+                    { name: 'Others', value: 28, pct: 19 }
+                ]
+            };
+        }
+        
+        function showLoading() {
+            const skeleton = '<span class="skeleton" style="width:100px;height:32px;"></span>';
+            document.getElementById('avgTemp').innerHTML = skeleton;
+            document.getElementById('avgSal').innerHTML = skeleton;
+            document.getElementById('floatCount').innerHTML = skeleton;
+            document.getElementById('maxDepth').innerHTML = skeleton;
+        }
+        
+        function updateSummary(data) {
+            document.getElementById('totalRecords').textContent = 
+                data.records ? data.records.toLocaleString() : 'N/A';
+            document.getElementById('uniqueFloats').textContent = 
+                data.unique_floats ? data.unique_floats.toLocaleString() : 'N/A';
+            document.getElementById('dateRange').textContent = 
+                data.data_range ? `${data.data_range.start} to ${data.data_range.end}` : 'N/A';
+            document.getElementById('dbStatus').textContent = 
+                data.database === 'connected' ? '🟢 Connected' : '🔴 Disconnected';
+        }
+        
+        function loadCharts(stats) {
+            const colors = getChartColors();
+            
+            // Destroy existing charts
+            [tempChart, salChart, timelineChart, regionChart].forEach(c => c?.destroy());
+            
+            // Temperature Distribution
+            const tempLabels = ['<20', '20-22', '22-24', '24-26', '26-28', '28-30', '30+'];
+            const tempData = stats?.temperature_distribution 
+                ? Object.values(stats.temperature_distribution)
+                : [10, 25, 45, 80, 120, 95, 35];
+            
+            tempChart = new Chart(document.getElementById('tempChart'), {
+                type: 'bar',
+                data: {
+                    labels: tempLabels,
+                    datasets: [{
+                        data: tempData,
+                        backgroundColor: colors.temp.bg,
+                        borderColor: colors.temp.border,
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { 
+                            title: { display: true, text: 'Temperature (°C)', color: colors.text, font: { weight: 600 } },
+                            ticks: { color: colors.text, font: { size: 12 } },
+                            grid: { color: colors.grid }
+                        },
+                        y: { 
+                            title: { display: true, text: 'Count (thousands)', color: colors.text, font: { weight: 600 } },
+                            ticks: { color: colors.text, font: { size: 12 } },
+                            grid: { color: colors.grid }
+                        }
+                    }
+                }
+            });
+            
+            // Salinity Distribution
+            const salLabels = ['<33', '33-34', '34-35', '35-36', '36-37', '37+'];
+            const salData = stats?.salinity_distribution
+                ? Object.values(stats.salinity_distribution)
+                : [15, 55, 100, 150, 80, 20];
+            
+            salChart = new Chart(document.getElementById('salChart'), {
+                type: 'bar',
+                data: {
+                    labels: salLabels,
+                    datasets: [{
+                        data: salData,
+                        backgroundColor: colors.sal.bg,
+                        borderColor: colors.sal.border,
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { 
+                            title: { display: true, text: 'Salinity (PSU)', color: colors.text, font: { weight: 600 } },
+                            ticks: { color: colors.text, font: { size: 12 } },
+                            grid: { color: colors.grid }
+                        },
+                        y: { 
+                            title: { display: true, text: 'Count (thousands)', color: colors.text, font: { weight: 600 } },
+                            ticks: { color: colors.text, font: { size: 12 } },
+                            grid: { color: colors.grid }
+                        }
+                    }
+                }
+            });
+            
+            // Timeline Chart
+            timelineChart = new Chart(document.getElementById('timelineChart'), {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [{
+                        data: [85, 92, 105, 118, 125, 140, 155, 148, 132, 115, 98, 88],
+                        borderColor: colors.timeline.border,
+                        backgroundColor: colors.timeline.bg,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 5,
+                        pointHoverRadius: 8,
+                        pointBackgroundColor: colors.timeline.border,
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { 
+                            ticks: { color: colors.text, font: { size: 12 } },
+                            grid: { color: colors.grid }
+                        },
+                        y: { 
+                            title: { display: true, text: 'Observations (K)', color: colors.text, font: { weight: 600 } },
+                            ticks: { color: colors.text, font: { size: 12 } },
+                            grid: { color: colors.grid }
+                        }
+                    }
+                }
+            });
+            
+            // Regional Coverage Doughnut
+            regionChart = new Chart(document.getElementById('regionChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Bay of Bengal', 'Arabian Sea', 'Pacific Ocean', 'Indian Ocean', 'Atlantic', 'Other'],
+                    datasets: [{
+                        data: [28, 22, 20, 15, 10, 5],
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.85)',
+                            'rgba(6, 182, 212, 0.85)',
+                            'rgba(139, 92, 246, 0.85)',
+                            'rgba(34, 197, 94, 0.85)',
+                            'rgba(249, 115, 22, 0.85)',
+                            'rgba(100, 116, 139, 0.85)'
+                        ],
+                        borderWidth: 0,
+                        hoverOffset: 12
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                color: colors.text,
+                                padding: 20,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: { size: 12, weight: 500 }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            window.chartsLoaded = true;
+            
+            // ========================================
+            // Trending Indicators & Sparklines
+            // ========================================
+            updateTrendingIndicators(stats);
+            drawSparklines(stats);
+        }
+        
+        /**
+         * Update trending indicators based on stats
+         */
+        function updateTrendingIndicators(stats) {
+            if (!stats) return;
+            
+            // Temperature trend (simulated - would come from backend)
+            updateTrending('tempTrending', 'tempTrendValue', stats.avg_temperature, 2.3, 'up');
+            
+            // Salinity trend (simulated - would come from backend)
+            updateTrending('salTrending', 'salTrendValue', stats.avg_salinity, -0.8, 'down');
+            
+            // Floats trend (simulated)
+            updateTrending('floatsTrending', 'floatsTrendValue', stats.unique_floats, 5.2, 'up');
+            
+            // Depth trend (simulated - stable)
+            updateTrending('depthTrending', 'depthTrendValue', stats.max_depth, 0, 'flat');
+        }
+        
+        /**
+         * Update individual trending indicator
+         */
+        function updateTrending(elementId, valueId, value, percentage, direction) {
+            const element = document.getElementById(elementId);
+            const valueElement = document.getElementById(valueId);
+            
+            if (!element || !valueElement) return;
+            
+            // Show element
+            element.style.display = 'flex';
+            
+            // Update percentage
+            const sign = percentage >= 0 ? '+' : '';
+            valueElement.textContent = `${sign}${percentage.toFixed(1)}%`;
+            
+            // Update class based on direction
+            element.className = 'stat-trending';
+            
+            let icon = '→';
+            if (direction === 'up') {
+                element.classList.add('up');
+                icon = '↗️';
+            } else if (direction === 'down') {
+                element.classList.add('down');
+                icon = '↘️';
+            } else {
+                element.classList.add('flat');
+                icon = '→';
+            }
+            
+            element.querySelector('.stat-trending-icon').textContent = icon;
+        }
+        
+        /**
+         * Draw sparkline charts for trend visualization
+         */
+        function drawSparklines(stats) {
+            if (!stats) return;
+            
+            // Generate mock 7-day trend data
+            const generateTrendData = () => {
+                const data = [];
+                for (let i = 0; i < 7; i++) {
+                    data.push(Math.random() * 40 - 20); // Random between -20 and +20
+                }
+                return data;
+            };
+            
+            // Temperature sparkline
+            drawSparkline('sparkTemp', generateTrendData(), '#ef4444', '#f97316');
+            
+            // Salinity sparkline
+            drawSparkline('sparkSal', generateTrendData(), '#3b82f6', '#06b6d4');
+            
+            // Floats sparkline
+            drawSparkline('sparkFloats', generateTrendData(), '#22c55e', '#10b981');
+            
+            // Depth sparkline
+            drawSparkline('sparkDepth', generateTrendData(), '#8b5cf6', '#a855f7');
+        }
+        
+        /**
+         * Draw a single sparkline on canvas
+         */
+        function drawSparkline(canvasId, data, color1, color2) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Calculate dimensions
+            const padding = 4;
+            const graphWidth = width - (padding * 2);
+            const graphHeight = height - (padding * 2);
+            const pointSpacing = graphWidth / (data.length - 1);
+            
+            // Find min/max for scaling
+            const minValue = Math.min(...data);
+            const maxValue = Math.max(...data);
+            const range = maxValue - minValue || 1;
+            
+            // Draw gradient background
+            const gradient = ctx.createLinearGradient(0, 0, 0, height);
+            gradient.addColorStop(0, color1 + '30');
+            gradient.addColorStop(1, color1 + '05');
+            
+            // Draw line
+            ctx.strokeStyle = color1;
+            ctx.lineWidth = 1.5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            
+            for (let i = 0; i < data.length; i++) {
+                const x = padding + (i * pointSpacing);
+                const y = padding + graphHeight - ((data[i] - minValue) / range * graphHeight);
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            
+            ctx.stroke();
+            
+            // Draw filled area
+            ctx.lineTo(padding + graphWidth, padding + graphHeight);
+            ctx.lineTo(padding, padding + graphHeight);
+            ctx.closePath();
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            
+            // Draw points
+            ctx.fillStyle = color1;
+            for (let i = 0; i < data.length; i++) {
+                const x = padding + (i * pointSpacing);
+                const y = padding + graphHeight - ((data[i] - minValue) / range * graphHeight);
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // ============================================
+        // Sparkline Modal Functionality
+        // ============================================
+        
+        const metricConfigs = {
+            temp: {
+                title: '🌡️ Temperature Trend',
+                icon: '🌡️',
+                unit: '°C',
+                color: '#ef4444'
+            },
+            sal: {
+                title: '🧪 Salinity Trend',
+                icon: '🧪',
+                unit: 'PSU',
+                color: '#3b82f6'
+            },
+            floats: {
+                title: '🔵 Active Floats Trend',
+                icon: '🔵',
+                unit: 'count',
+                color: '#22c55e'
+            },
+            depth: {
+                title: '⬇️ Max Depth Trend',
+                icon: '⬇️',
+                unit: 'm',
+                color: '#8b5cf6'
+            }
+        };
+        
+        let currentMetric = null;
+        
+        function initSparklineClickHandlers() {
+            console.log('Initializing sparkline click handlers...');
+            // Make stat cards clickable to expand sparkline
+            const statCards = document.querySelectorAll('.stat-card');
+            console.log('Found stat cards:', statCards.length);
+            
+            statCards.forEach((card, index) => {
+                // Determine which metric this card is
+                let metric = null;
+                if (card.classList.contains('temp')) metric = 'temp';
+                else if (card.classList.contains('sal')) metric = 'sal';
+                else if (card.classList.contains('floats')) metric = 'floats';
+                else if (card.classList.contains('depth')) metric = 'depth';
+                
+                console.log(`Card ${index}:`, metric, card.className);
+                
+                if (metric) {
+                    // Make entire card clickable
+                    card.style.cursor = 'pointer';
+                    card.addEventListener('click', (e) => {
+                        console.log('Stat card clicked:', metric);
+                        // Don't trigger if clicking on select/button
+                        if (e.target.tagName !== 'SELECT' && e.target.tagName !== 'BUTTON') {
+                            openSparklineModal(metric);
+                        }
+                    });
+                    
+                    // Also make sparkline canvas directly clickable
+                    const canvas = card.querySelector('canvas');
+                    if (canvas) {
+                        console.log(`Canvas found for ${metric}`);
+                        canvas.style.cursor = 'pointer';
+                        canvas.style.pointerEvents = 'auto';
+                        canvas.addEventListener('click', (e) => {
+                            console.log('Canvas clicked:', metric);
+                            e.stopPropagation();
+                            openSparklineModal(metric);
+                        });
+                    }
+                }
+            });
+        }
+        
+        function openSparklineModal(metric) {
+            console.log('openSparklineModal called with metric:', metric);
+            currentMetric = metric;
+            const config = metricConfigs[metric];
+            console.log('Config:', config);
+            if (!config) {
+                console.error('No config found for metric:', metric);
+                return;
+            }
+            
+            let modal = document.getElementById('sparklineModal');
+            if (!modal) {
+                console.log('Creating modal...');
+                modal = createSparklineModal();
+                document.body.appendChild(modal);
+                console.log('Modal created and appended');
+            }
+            
+            const title = modal.querySelector('.sparkline-modal-title');
+            title.textContent = `${config.icon} ${config.title}`;
+            
+            const data = generate7DayTrendData(metric);
+            displaySparklineChart(metric, data, config);
+            displaySparklineStats(metric, data, config);
+            displaySparklineDataTable(metric, data, config);
+            
+            console.log('Adding active class to modal');
+            modal.classList.add('active');
+            console.log('Modal should now be visible');
+        }
+        
+        function createSparklineModal() {
+            const modal = document.createElement('div');
+            modal.id = 'sparklineModal';
+            modal.className = 'sparkline-modal';
+            modal.innerHTML = `
+                <div class="sparkline-modal-content">
+                    <div class="sparkline-modal-header">
+                        <div class="sparkline-modal-title">Metric Trend</div>
+                        <button class="sparkline-modal-close" onclick="closeSparklineModal()">&times;</button>
+                    </div>
+                    
+                    <div class="sparkline-time-range" id="timeRangeButtons">
+                        <button class="time-range-btn active" onclick="updateSparklineTimeRange(7)">7 Days</button>
+                        <button class="time-range-btn" onclick="updateSparklineTimeRange(30)">30 Days</button>
+                        <button class="time-range-btn" onclick="updateSparklineTimeRange(90)">90 Days</button>
+                    </div>
+                    
+                    <div class="sparkline-modal-body">
+                        <div class="sparkline-chart-container">
+                            <canvas id="expandedChart" class="sparkline-chart-canvas"></canvas>
+                        </div>
+                        
+                        <div class="sparkline-stats-grid" id="sparklineStatsGrid">
+                        </div>
+                    </div>
+                    
+                    <table class="sparkline-data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Value</th>
+                                <th>Change</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sparklineDataTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeSparklineModal();
+            });
+            
+            return modal;
+        }
+        
+        function closeSparklineModal() {
+            const modal = document.getElementById('sparklineModal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        }
+        
+        function generate7DayTrendData(metric, days = 7) {
+            const data = [];
+            const today = new Date();
+            
+            for (let i = days - 1; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                
+                const baseValue = getMetricBaseValue(metric);
+                const noise = (Math.random() - 0.5) * (baseValue * 0.1);
+                const trend = (days - i) * (baseValue * 0.01);
+                
+                data.push({
+                    date: date.toISOString().split('T')[0],
+                    time: `${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`,
+                    value: (baseValue + noise + trend).toFixed(2),
+                    change: i === days - 1 ? 0 : ((Math.random() - 0.5) * 2).toFixed(2)
+                });
+            }
+            
+            return data;
+        }
+        
+        function getMetricBaseValue(metric) {
+            const bases = {
+                temp: 24.5,
+                sal: 34.8,
+                floats: 3800,
+                depth: 5987
+            };
+            return bases[metric] || 0;
+        }
+        
+        function displaySparklineChart(metric, data, config) {
+            const canvas = document.getElementById('expandedChart');
+            if (!canvas) return;
+            
+            if (window.expandedChart) {
+                try {
+                    window.expandedChart.destroy();
+                } catch (e) {
+                    console.warn('Error destroying chart:', e);
+                }
+            }
+            
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const textColor = isDark ? '#94a3b8' : '#64748b';
+            const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+            
+            try {
+                window.expandedChart = new Chart(canvas, {
+                    type: 'line',
+                    data: {
+                        labels: data.map(d => d.date),
+                        datasets: [{
+                            label: config.title,
+                            data: data.map(d => parseFloat(d.value)),
+                            borderColor: config.color,
+                            backgroundColor: config.color + '20',
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 5,
+                            pointHoverRadius: 8,
+                            pointBackgroundColor: config.color,
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            borderWidth: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(0,0,0,0.8)',
+                                titleColor: '#fff',
+                                bodyColor: '#fff',
+                                borderColor: config.color,
+                                borderWidth: 1,
+                                padding: 12,
+                                displayColors: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${config.title}: ${context.parsed.y} ${config.unit}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: textColor },
+                                grid: { color: gridColor }
+                            },
+                            y: {
+                                ticks: { color: textColor },
+                                grid: { color: gridColor }
+                            }
+                        }
+                    }
+                });
+                console.log('Chart created successfully');
+            } catch (e) {
+                console.error('Error creating chart:', e);
+            }
+        }
+        
+        function displaySparklineStats(metric, data, config) {
+            const values = data.map(d => parseFloat(d.value));
+            const average = (values.reduce((a, b) => a + b) / values.length).toFixed(2);
+            const max = Math.max(...values).toFixed(2);
+            const min = Math.min(...values).toFixed(2);
+            const change = ((values[values.length - 1] - values[0]) / values[0] * 100).toFixed(1);
+            
+            const statsGrid = document.getElementById('sparklineStatsGrid');
+            statsGrid.innerHTML = `
+                <div class="sparkline-stat-box">
+                    <div class="sparkline-stat-label">Average</div>
+                    <div class="sparkline-stat-value">${average} ${config.unit}</div>
+                </div>
+                <div class="sparkline-stat-box">
+                    <div class="sparkline-stat-label">Maximum</div>
+                    <div class="sparkline-stat-value">${max} ${config.unit}</div>
+                </div>
+                <div class="sparkline-stat-box">
+                    <div class="sparkline-stat-label">Minimum</div>
+                    <div class="sparkline-stat-value">${min} ${config.unit}</div>
+                </div>
+                <div class="sparkline-stat-box">
+                    <div class="sparkline-stat-label">Change</div>
+                    <div class="sparkline-stat-value" style="color: ${change >= 0 ? '#22c55e' : '#ef4444'}">
+                        ${change >= 0 ? '+' : ''}${change}%
+                    </div>
+                </div>
+            `;
+        }
+        
+        function displaySparklineDataTable(metric, data, config) {
+            const tbody = document.getElementById('sparklineDataTableBody');
+            tbody.innerHTML = data.map(d => `
+                <tr>
+                    <td>${d.date}</td>
+                    <td>${d.time}</td>
+                    <td><strong>${d.value} ${config.unit}</strong></td>
+                    <td style="color: ${d.change >= 0 ? '#22c55e' : '#ef4444'}">
+                        ${d.change >= 0 ? '+' : ''}${d.change} ${config.unit}
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function updateSparklineTimeRange(days) {
+            document.querySelectorAll('.time-range-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            if (currentMetric) {
+                const config = metricConfigs[currentMetric];
+                const data = generate7DayTrendData(currentMetric, days);
+                displaySparklineChart(currentMetric, data, config);
+                displaySparklineStats(currentMetric, data, config);
+                displaySparklineDataTable(currentMetric, data, config);
+            }
+        }
+        
+        // Close on ESC key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeSparklineModal();
+        });
+        
+        // Initial load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Hide database status on deployed sites (only show on localhost)
+            const isDeployed = !window.location.hostname.includes('localhost') && 
+                               !window.location.hostname.includes('127.0.0.1');
+            const dbStatusItem = document.getElementById('dbStatusItem');
+            if (isDeployed && dbStatusItem) {
+                dbStatusItem.style.display = 'none';
+            }
+            
+            loadDashboardData();
+            
+            // Initialize sparkline click handlers
+            setTimeout(initSparklineClickHandlers, 500);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FloatChart - Data Setup Wizard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌊</text></svg>">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-tertiary: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --border-color: #2a2a2a;
+            --accent-primary: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .wizard-container {
+            max-width: 700px;
+            width: 100%;
+            padding: 2rem;
+        }
+        
+        .wizard-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .wizard-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .wizard-header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+        
+        .wizard-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .wizard-card h2 {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .step {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .step.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+        
+        .step.completed {
+            background: var(--success);
+            border-color: var(--success);
+        }
+        
+        .year-selector {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .year-group {
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .year-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 0.875rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+        
+        .estimate-box {
+            background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-primary));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .estimate-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            text-align: center;
+        }
+        
+        .estimate-item {
+            padding: 1rem;
+        }
+        
+        .estimate-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+        
+        .estimate-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+        
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        
+        .btn-primary {
+            background: var(--accent-primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-row {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .btn-row .btn {
+            flex: 1;
+        }
+        
+        .progress-section {
+            margin-top: 1.5rem;
+        }
+        
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        
+        .progress-bar {
+            height: 12px;
+            background: var(--bg-primary);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-primary), var(--success));
+            transition: width 0.3s ease;
+            border-radius: 6px;
+        }
+        
+        .progress-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        
+        .log-output {
+            background: var(--bg-primary);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 1rem;
+            white-space: pre-wrap;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .status-badge.connected {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+        
+        .status-badge.disconnected {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+        
+        .region-select {
+            margin-top: 1rem;
+        }
+        
+        .hidden { display: none !important; }
+        
+        .complete-message {
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .complete-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        
+        .complete-message h2 {
+            justify-content: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .complete-message p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+        
+        .quick-btn {
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        
+        .quick-btn:hover {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+        
+        .current-data-info {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            color: var(--text-secondary);
+        }
+        
+        .info-value {
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="wizard-container">
+        <div class="wizard-header">
+            <h1>🌊 FloatChart Setup</h1>
+            <p>Download ARGO oceanographic data for your local database</p>
+        </div>
+        
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+            <div class="step active" id="step1">1</div>
+            <div class="step" id="step2">2</div>
+            <div class="step" id="step3">3</div>
+        </div>
+        
+        <!-- Step 1: Connection Check -->
+        <div class="wizard-card" id="card-connection">
+            <h2>🔌 Step 1: Database Connection</h2>
+            
+            <div class="current-data-info" id="currentDataInfo" style="display: none;">
+                <div class="info-row">
+                    <span class="info-label">Current Records</span>
+                    <span class="info-value" id="currentRecords">--</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Unique Floats</span>
+                    <span class="info-value" id="currentFloats">--</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date Range</span>
+                    <span class="info-value" id="currentDateRange">--</span>
+                </div>
+            </div>
+            
+            <div id="connectionStatus">
+                <p style="color: var(--text-secondary);">Checking database connection...</p>
+            </div>
+            
+            <div class="btn-row">
+                <button class="btn btn-primary" id="btnCheckConnection" onclick="checkConnection()">
+                    🔄 Check Connection
+                </button>
+            </div>
+        </div>
+        
+        <!-- Step 2: Select Data Range -->
+        <div class="wizard-card hidden" id="card-select">
+            <h2>📅 Step 2: Select Data Range</h2>
+            
+            <div class="year-selector">
+                <div class="year-group">
+                    <label>Start Year</label>
+                    <select id="startYear"></select>
+                </div>
+                <div class="year-group">
+                    <label>End Year</label>
+                    <select id="endYear"></select>
+                </div>
+                <div class="year-group">
+                    <label>Region</label>
+                    <select id="regionSelect">
+                        <option value="india_waters">India Waters (Recommended)</option>
+                        <option value="bay_of_bengal">Bay of Bengal</option>
+                        <option value="arabian_sea">Arabian Sea</option>
+                        <option value="indian_ocean">Indian Ocean</option>
+                        <option value="pacific">Pacific Ocean</option>
+                        <option value="atlantic">Atlantic Ocean</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="quick-actions">
+                <button class="quick-btn" onclick="setPreset('recent')">Last 2 Years</button>
+                <button class="quick-btn" onclick="setPreset('5years')">Last 5 Years</button>
+                <button class="quick-btn" onclick="setPreset('decade')">Last Decade</button>
+                <button class="quick-btn" onclick="setPreset('all')">All Data (2002+)</button>
+            </div>
+            
+            <div class="estimate-box">
+                <h3 style="margin-bottom: 1rem; font-size: 1rem;">📊 Estimated Download</h3>
+                <div class="estimate-grid">
+                    <div class="estimate-item">
+                        <div class="estimate-value" id="estRecords">--</div>
+                        <div class="estimate-label">Records</div>
+                    </div>
+                    <div class="estimate-item">
+                        <div class="estimate-value" id="estSize">--</div>
+                        <div class="estimate-label">Database Size</div>
+                    </div>
+                    <div class="estimate-item">
+                        <div class="estimate-value" id="estTime">--</div>
+                        <div class="estimate-label">Est. Time</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="btn-row">
+                <button class="btn btn-secondary" onclick="goToStep(1)">← Back</button>
+                <button class="btn btn-primary" onclick="startDownload()">
+                    ⬇️ Start Download
+                </button>
+            </div>
+        </div>
+        
+        <!-- Step 3: Download Progress -->
+        <div class="wizard-card hidden" id="card-download">
+            <h2>⬇️ Step 3: Downloading Data</h2>
+            
+            <div class="progress-section">
+                <div class="progress-header">
+                    <span id="progressStatus">Initializing...</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+                <div class="progress-stats">
+                    <span id="recordsUploaded">0 records uploaded</span>
+                    <span id="timeRemaining">Calculating...</span>
+                </div>
+            </div>
+            
+            <div class="log-output" id="logOutput">Starting download...</div>
+            
+            <div class="btn-row">
+                <button class="btn btn-secondary" id="btnCancel" onclick="cancelDownload()">
+                    ✕ Cancel
+                </button>
+            </div>
+        </div>
+        
+        <!-- Complete -->
+        <div class="wizard-card hidden" id="card-complete">
+            <div class="complete-message">
+                <div class="complete-icon">✅</div>
+                <h2>Download Complete!</h2>
+                <p id="completeMessage">Your database is ready with ARGO data.</p>
+                
+                <div class="estimate-box" style="text-align: left;">
+                    <div class="estimate-grid">
+                        <div class="estimate-item">
+                            <div class="estimate-value" id="finalRecords">--</div>
+                            <div class="estimate-label">Total Records</div>
+                        </div>
+                        <div class="estimate-item">
+                            <div class="estimate-value" id="finalFloats">--</div>
+                            <div class="estimate-label">Unique Floats</div>
+                        </div>
+                        <div class="estimate-item">
+                            <div class="estimate-value" id="finalYears">--</div>
+                            <div class="estimate-label">Years of Data</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="btn-row">
+                    <button class="btn btn-secondary" onclick="goToStep(2)">
+                        ⬇️ Download More
+                    </button>
+                    <button class="btn btn-success" onclick="launchChatbot()">
+                        🚀 Launch FloatChart
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let fetchInterval = null;
+        let startTime = null;
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            populateYearSelectors();
+            checkConnection();
+        });
+        
+        function populateYearSelectors() {
+            const currentYear = new Date().getFullYear();
+            const startYearSelect = document.getElementById('startYear');
+            const endYearSelect = document.getElementById('endYear');
+            
+            for (let year = currentYear; year >= 2002; year--) {
+                startYearSelect.add(new Option(year, year));
+                endYearSelect.add(new Option(year, year));
+            }
+            
+            // Default: last 2 years
+            startYearSelect.value = currentYear - 2;
+            endYearSelect.value = currentYear;
+            
+            startYearSelect.addEventListener('change', updateEstimates);
+            endYearSelect.addEventListener('change', updateEstimates);
+            document.getElementById('regionSelect').addEventListener('change', updateEstimates);
+        }
+        
+        function setPreset(preset) {
+            const currentYear = new Date().getFullYear();
+            const startSelect = document.getElementById('startYear');
+            const endSelect = document.getElementById('endYear');
+            
+            endSelect.value = currentYear;
+            
+            switch(preset) {
+                case 'recent':
+                    startSelect.value = currentYear - 2;
+                    break;
+                case '5years':
+                    startSelect.value = currentYear - 5;
+                    break;
+                case 'decade':
+                    startSelect.value = currentYear - 10;
+                    break;
+                case 'all':
+                    startSelect.value = 2002;
+                    break;
+            }
+            
+            updateEstimates();
+        }
+        
+        function updateEstimates() {
+            const startYear = parseInt(document.getElementById('startYear').value);
+            const endYear = parseInt(document.getElementById('endYear').value);
+            const region = document.getElementById('regionSelect').value;
+            
+            const years = endYear - startYear + 1;
+            
+            // Rough estimates based on region
+            const recordsPerYear = {
+                'india_waters': 2000000,
+                'bay_of_bengal': 800000,
+                'arabian_sea': 600000,
+                'indian_ocean': 3000000,
+                'pacific': 8000000,
+                'atlantic': 6000000
+            };
+            
+            const records = years * (recordsPerYear[region] || 2000000);
+            const sizeGB = (records * 50 / 1e9).toFixed(1); // ~50 bytes per record
+            const timeMinutes = Math.ceil(years * 2); // ~2 min per year
+            
+            document.getElementById('estRecords').textContent = formatNumber(records);
+            document.getElementById('estSize').textContent = `~${sizeGB} GB`;
+            document.getElementById('estTime').textContent = `~${timeMinutes} min`;
+        }
+        
+        async function checkConnection() {
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.innerHTML = '<p style="color: var(--text-secondary);">Checking database connection...</p>';
+            
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                if (data.database_connected) {
+                    statusDiv.innerHTML = `
+                        <span class="status-badge connected">
+                            <span>●</span> Connected
+                        </span>
+                    `;
+                    
+                    // Show current data
+                    if (data.total_records > 0) {
+                        document.getElementById('currentDataInfo').style.display = 'block';
+                        await loadCurrentStats();
+                    }
+                    
+                    // Enable next step
+                    document.getElementById('step1').classList.add('completed');
+                    setTimeout(() => goToStep(2), 500);
+                } else {
+                    statusDiv.innerHTML = `
+                        <span class="status-badge disconnected">
+                            <span>●</span> Not Connected
+                        </span>
+                        <p style="margin-top: 1rem; color: var(--text-secondary);">
+                            Please check your <code>.env</code> file and ensure DATABASE_URL is set correctly.
+                        </p>
+                    `;
+                }
+            } catch (e) {
+                statusDiv.innerHTML = `
+                    <span class="status-badge disconnected">
+                        <span>●</span> Connection Error
+                    </span>
+                    <p style="margin-top: 1rem; color: var(--text-secondary);">${e.message}</p>
+                `;
+            }
+        }
+        
+        async function loadCurrentStats() {
+            try {
+                const response = await fetch('/api/data-manager/stats');
+                const data = await response.json();
+                
+                document.getElementById('currentRecords').textContent = formatNumber(data.total_records || 0);
+                document.getElementById('currentFloats').textContent = formatNumber(data.unique_floats || 0);
+                
+                if (data.min_date && data.max_date) {
+                    const minYear = new Date(data.min_date).getFullYear();
+                    const maxYear = new Date(data.max_date).getFullYear();
+                    document.getElementById('currentDateRange').textContent = `${minYear} - ${maxYear}`;
+                }
+            } catch (e) {
+                console.error('Error loading stats:', e);
+            }
+        }
+        
+        function goToStep(step) {
+            // Hide all cards
+            document.querySelectorAll('.wizard-card').forEach(c => c.classList.add('hidden'));
+            
+            // Update step indicators
+            document.querySelectorAll('.step').forEach((s, i) => {
+                s.classList.remove('active');
+                if (i + 1 < step) s.classList.add('completed');
+            });
+            document.getElementById(`step${step}`).classList.add('active');
+            
+            // Show appropriate card
+            switch(step) {
+                case 1:
+                    document.getElementById('card-connection').classList.remove('hidden');
+                    break;
+                case 2:
+                    document.getElementById('card-select').classList.remove('hidden');
+                    updateEstimates();
+                    break;
+                case 3:
+                    document.getElementById('card-download').classList.remove('hidden');
+                    break;
+            }
+        }
+        
+        async function startDownload() {
+            const startYear = document.getElementById('startYear').value;
+            const endYear = document.getElementById('endYear').value;
+            const region = document.getElementById('regionSelect').value;
+            
+            goToStep(3);
+            startTime = Date.now();
+            
+            document.getElementById('logOutput').textContent = `Starting download...\nRegion: ${region}\nYears: ${startYear} - ${endYear}\n`;
+            
+            try {
+                const response = await fetch('/api/data-manager/fetch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        region: region,
+                        start_date: `${startYear}-01-01`,
+                        end_date: `${endYear}-12-31`,
+                        server: 'ifremer'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    document.getElementById('logOutput').textContent += `\n❌ Error: ${data.error}`;
+                    return;
+                }
+                
+                // Start polling
+                fetchInterval = setInterval(checkProgress, 1000);
+                
+            } catch (e) {
+                document.getElementById('logOutput').textContent += `\n❌ Error: ${e.message}`;
+            }
+        }
+        
+        async function checkProgress() {
+            try {
+                const response = await fetch('/api/data-manager/fetch-progress');
+                const data = await response.json();
+                
+                const progress = data.progress || 0;
+                document.getElementById('progressFill').style.width = `${progress}%`;
+                document.getElementById('progressPercent').textContent = `${progress}%`;
+                document.getElementById('progressStatus').textContent = data.message || 'Processing...';
+                document.getElementById('recordsUploaded').textContent = `${formatNumber(data.total_records || 0)} records uploaded`;
+                
+                // Calculate time remaining
+                if (progress > 0 && startTime) {
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    const remaining = (elapsed / progress) * (100 - progress);
+                    document.getElementById('timeRemaining').textContent = formatTime(remaining);
+                }
+                
+                const log = document.getElementById('logOutput');
+                if (data.total_records > 0) {
+                    log.textContent += `📊 ${formatNumber(data.total_records)} records...\n`;
+                    log.scrollTop = log.scrollHeight;
+                }
+                
+                if (!data.running) {
+                    clearInterval(fetchInterval);
+                    
+                    if (data.error) {
+                        log.textContent += `\n❌ Error: ${data.error}\n`;
+                    } else {
+                        log.textContent += `\n✅ ${data.message}\n`;
+                        showComplete(data.total_records);
+                    }
+                }
+            } catch (e) {
+                console.error('Progress check error:', e);
+            }
+        }
+        
+        function cancelDownload() {
+            if (fetchInterval) {
+                clearInterval(fetchInterval);
+            }
+            goToStep(2);
+        }
+        
+        async function showComplete(records) {
+            document.getElementById('step3').classList.add('completed');
+            
+            // Load final stats
+            try {
+                const response = await fetch('/api/data-manager/stats');
+                const data = await response.json();
+                
+                document.getElementById('finalRecords').textContent = formatNumber(data.total_records || records);
+                document.getElementById('finalFloats').textContent = formatNumber(data.unique_floats || 0);
+                
+                if (data.min_date && data.max_date) {
+                    const minYear = new Date(data.min_date).getFullYear();
+                    const maxYear = new Date(data.max_date).getFullYear();
+                    document.getElementById('finalYears').textContent = `${maxYear - minYear + 1}`;
+                }
+            } catch (e) {
+                document.getElementById('finalRecords').textContent = formatNumber(records);
+            }
+            
+            document.querySelectorAll('.wizard-card').forEach(c => c.classList.add('hidden'));
+            document.getElementById('card-complete').classList.remove('hidden');
+        }
+        
+        function launchChatbot() {
+            // Redirect to chatbot (different port)
+            window.location.href = 'http://localhost:5000';
+        }
+        
+        function formatNumber(num) {
+            if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+            if (num >= 1e3) return (num / 1e3).toFixed(0) + 'K';
+            return num.toString();
+        }
+        
+        function formatTime(seconds) {
+            if (seconds < 60) return `~${Math.ceil(seconds)}s remaining`;
+            const mins = Math.ceil(seconds / 60);
+            return `~${mins} min remaining`;
+        }
+    </script>
+</body>
+</html>

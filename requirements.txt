@@ -1,0 +1,24 @@
+# FloatChart - All Dependencies
+# Run: pip install -r requirements.txt
+
+# Web Framework
+flask
+flask-cors
+
+# Database
+sqlalchemy
+psycopg2-binary
+duckdb==1.1.0
+duckdb-engine==0.13.0
+
+# Data Processing
+pandas
+numpy
+requests
+
+# AI (at least one required - NVIDIA NIM is recommended)
+langchain-core
+langchain-openai       # Required for NVIDIA NIM
+
+# Environment
+python-dotenv

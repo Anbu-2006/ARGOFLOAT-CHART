@@ -1,0 +1,24 @@
+# FloatChart - ARGO_CHATBOT Dependencies
+# Run: pip install -r requirements.txt
+
+# Web Framework
+flask
+flask-cors
+
+# Database
+sqlalchemy
+psycopg2-binary
+sqlalchemy-cockroachdb  # CockroachDB support
+
+# Data Processing
+pandas
+numpy
+requests
+
+# AI (at least one required - NVIDIA NIM is recommended)
+langchain-core
+langchain-openai       # Required for NVIDIA NIM
+langchain-google-genai # Free tier available
+
+# Environment
+python-dotenv

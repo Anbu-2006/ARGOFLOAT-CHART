@@ -1,0 +1,3247 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Map - FloatChart</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/premium.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <style>
+        /* === PREMIUM NEON OVERRIDES FOR MAP === */
+        .map-page {
+            background: linear-gradient(160deg, #020510 0%, #040c20 45%, #020814 100%) !important;
+        }
+
+        .data-panel {
+            background: rgba(4, 10, 26, 0.88) !important;
+            border-left: 1px solid rgba(0, 212, 255, 0.15) !important;
+            backdrop-filter: blur(32px) !important;
+        }
+
+        .panel-header {
+            background: rgba(2, 6, 18, 0.9) !important;
+            border-bottom: 1px solid rgba(0, 212, 255, 0.15) !important;
+            position: relative;
+        }
+
+        .panel-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00d4ff, #a855f7, transparent);
+            box-shadow: 0 0 12px rgba(0, 212, 255, 0.4);
+        }
+
+        .panel-title {
+            background: linear-gradient(135deg, #00d4ff, #e2f4ff) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            font-weight: 700 !important;
+        }
+
+        .float-badge {
+            background: linear-gradient(135deg, #00d4ff, #a855f7) !important;
+            box-shadow: 0 0 14px rgba(0, 212, 255, 0.4) !important;
+            border-radius: 100px !important;
+        }
+
+        .info-item {
+            background: rgba(0, 12, 32, 0.8) !important;
+            border: 1px solid rgba(0, 212, 255, 0.1) !important;
+            border-radius: 12px !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .info-item:hover {
+            border-color: rgba(0, 212, 255, 0.3) !important;
+            box-shadow: 0 0 16px rgba(0, 212, 255, 0.1) !important;
+        }
+
+        .info-value {
+            background: linear-gradient(135deg, #00d4ff, #e2f4ff) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            font-weight: 700 !important;
+        }
+
+        .info-label {
+            color: rgba(0, 170, 210, 0.6) !important;
+            letter-spacing: 0.8px !important;
+        }
+
+        .traj-stat {
+            background: rgba(0, 12, 32, 0.8) !important;
+            border-radius: 12px !important;
+            border: 1px solid rgba(0, 212, 255, 0.1) !important;
+        }
+
+        .traj-stat-value {
+            background: linear-gradient(135deg, #00d4ff, #a855f7) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            font-weight: 800 !important;
+        }
+
+        .back-btn {
+            background: rgba(4, 10, 26, 0.88) !important;
+            border: 1px solid rgba(0, 212, 255, 0.2) !important;
+            color: rgba(0, 180, 220, 0.8) !important;
+            border-radius: 12px !important;
+            backdrop-filter: blur(16px) !important;
+            font-weight: 600 !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .back-btn:hover {
+            border-color: #00d4ff !important;
+            color: #00d4ff !important;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3) !important;
+        }
+
+        .map-instructions {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(168, 85, 247, 0.12)) !important;
+            border: 1px solid rgba(0, 212, 255, 0.25) !important;
+            border-radius: 12px !important;
+            backdrop-filter: blur(16px) !important;
+            color: rgba(200, 240, 255, 0.9) !important;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.1) !important;
+        }
+
+        .float-item {
+            background: rgba(0, 12, 32, 0.75) !important;
+            border: 1px solid rgba(0, 212, 255, 0.1) !important;
+            border-radius: 12px !important;
+            transition: all 0.25s ease !important;
+        }
+
+        .float-item:hover {
+            border-color: rgba(0, 212, 255, 0.4) !important;
+            background: rgba(0, 212, 255, 0.06) !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4),
+                        0 0 20px rgba(0, 212, 255, 0.12) !important;
+            transform: scale(1.03) !important;
+        }
+
+        .float-item.selected {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(168, 85, 247, 0.1)) !important;
+            border-color: rgba(0, 212, 255, 0.4) !important;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.15) !important;
+        }
+
+        .float-item-id {
+            background: linear-gradient(135deg, #00d4ff, #e2f4ff) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            font-weight: 700 !important;
+        }
+
+        .clicked-location {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.12), rgba(168, 85, 247, 0.08)) !important;
+            border: 1px solid rgba(0, 212, 255, 0.3) !important;
+            border-radius: 14px !important;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.1) !important;
+        }
+
+        .location-coords {
+            background: linear-gradient(135deg, #00d4ff, #e2f4ff) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            font-weight: 700 !important;
+        }
+
+        .date-range-filter {
+            background: rgba(0, 12, 32, 0.75) !important;
+            border: 1px solid rgba(0, 212, 255, 0.1) !important;
+            border-radius: 14px !important;
+        }
+
+        .date-inputs input[type="month"] {
+            background: rgba(0, 8, 22, 0.9) !important;
+            border: 1px solid rgba(0, 212, 255, 0.2) !important;
+            border-radius: 10px !important;
+            color: rgba(200, 230, 255, 0.9) !important;
+        }
+
+        .date-inputs input[type="month"]:focus {
+            border-color: #00d4ff !important;
+            box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2) !important;
+        }
+
+        .date-range-info {
+            background: rgba(0, 212, 255, 0.08) !important;
+            border: 1px solid rgba(0, 212, 255, 0.2) !important;
+            color: rgba(0, 180, 220, 0.8) !important;
+            border-radius: 10px !important;
+        }
+
+        .action-button {
+            background: rgba(0, 12, 32, 0.8) !important;
+            border: 1px solid rgba(0, 212, 255, 0.15) !important;
+            color: rgba(0, 180, 220, 0.8) !important;
+            border-radius: 12px !important;
+            transition: all 0.2s ease !important;
+            font-weight: 600 !important;
+        }
+
+        .action-button:hover {
+            border-color: #00d4ff !important;
+            color: #00d4ff !important;
+            box-shadow: 0 0 16px rgba(0, 212, 255, 0.25) !important;
+        }
+
+        .action-button.primary {
+            background: linear-gradient(135deg, #00d4ff, #a855f7) !important;
+            border: none !important;
+            color: white !important;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.4) !important;
+        }
+
+        .action-button.primary:hover {
+            box-shadow: 0 0 35px rgba(0, 212, 255, 0.6) !important;
+            transform: translateY(-2px) !important;
+        }
+
+        .map-status {
+            background: rgba(4, 10, 26, 0.88) !important;
+            border: 1px solid rgba(0, 212, 255, 0.15) !important;
+            border-radius: 12px !important;
+            backdrop-filter: blur(16px) !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+            color: rgba(0, 180, 220, 0.7) !important;
+        }
+
+        .spinner {
+            border: 2px solid rgba(0, 212, 255, 0.1) !important;
+            border-top-color: #00d4ff !important;
+            box-shadow: 0 0 12px rgba(0, 212, 255, 0.3) !important;
+        }
+
+        .summary-stat {
+            background: rgba(0, 12, 32, 0.8) !important;
+            border: 1px solid rgba(0, 212, 255, 0.1) !important;
+            border-radius: 12px !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .summary-stat-value {
+            background: linear-gradient(135deg, #00d4ff, #a855f7) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            font-weight: 800 !important;
+        }
+
+        .traj-date-modal-content {
+            background: rgba(4, 10, 26, 0.97) !important;
+            border: 1px solid rgba(0, 212, 255, 0.2) !important;
+            border-radius: 18px !important;
+            box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7),
+                        0 0 40px rgba(0, 212, 255, 0.08) !important;
+            backdrop-filter: blur(40px) !important;
+        }
+
+        .modal-btn-confirm {
+            background: linear-gradient(135deg, #00d4ff, #a855f7) !important;
+            border: none !important;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.4) !important;
+        }
+
+        .profile-chart {
+            background: rgba(0, 8, 22, 0.85) !important;
+            border: 1px solid rgba(0, 212, 255, 0.1) !important;
+            border-radius: 14px !important;
+        }
+
+        .chart-type-tab {
+            background: rgba(0, 12, 32, 0.8) !important;
+            border: 1px solid rgba(0, 212, 255, 0.15) !important;
+            border-radius: 8px !important;
+            color: rgba(0, 170, 210, 0.7) !important;
+            font-weight: 500 !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .chart-type-tab:hover {
+            background: rgba(0, 212, 255, 0.1) !important;
+            color: #00d4ff !important;
+            border-color: rgba(0, 212, 255, 0.3) !important;
+        }
+
+        .chart-type-tab.active {
+            background: linear-gradient(135deg, #00d4ff, #a855f7) !important;
+            border: none !important;
+            color: white !important;
+            box-shadow: 0 0 16px rgba(0, 212, 255, 0.4) !important;
+        }
+
+        .section-title {
+            background: linear-gradient(135deg, #00d4ff, #e2f4ff) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            font-weight: 700 !important;
+        }
+
+        .panel-resize-handle:hover,
+        .panel-resize-handle.active {
+            background: linear-gradient(180deg, #00d4ff, #a855f7) !important;
+            box-shadow: 0 0 12px rgba(0, 212, 255, 0.4) !important;
+        }
+
+        /* Leaflet dark filter for map tiles */
+        .leaflet-tile-pane { filter: saturate(0.7) brightness(0.7) hue-rotate(8deg); }
+
+        .leaflet-popup-content-wrapper {
+            background: rgba(4, 12, 30, 0.96) !important;
+            border: 1px solid rgba(0, 212, 255, 0.25) !important;
+            color: #e2f4ff !important;
+            border-radius: 14px !important;
+            backdrop-filter: blur(20px) !important;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.2) !important;
+        }
+
+        .leaflet-popup-tip { background: rgba(4, 12, 30, 0.96) !important; }
+
+        .popup-title { color: #00d4ff !important; }
+
+        .leaflet-control-zoom {
+            background: rgba(4, 12, 30, 0.88) !important;
+            border: 1px solid rgba(0, 212, 255, 0.2) !important;
+            border-radius: 12px !important;
+            backdrop-filter: blur(16px) !important;
+        }
+
+        .leaflet-control-zoom a { color: rgba(0, 180, 220, 0.8) !important; }
+        .leaflet-control-zoom a:hover { background: rgba(0, 212, 255, 0.1) !important; color: #00d4ff !important; }
+
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 5, 15, 0.5); }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #00d4ff, #a855f7);
+            border-radius: 3px;
+        }
+        /* === END MAP OVERRIDES === */
+
+        .map-page {
+            display: flex;
+            height: 100vh;
+            background: var(--bg-main);
+        }
+        
+        .map-main {
+            flex: 1;
+            position: relative;
+        }
+        
+        .map-full {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Top Bar */
+        .map-topbar {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            right: 400px;
+            display: flex;
+            gap: 12px;
+            z-index: 1000;
+        }
+        
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: var(--bg-panel);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        
+        .back-btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent);
+        }
+        
+        /* Theme Toggle for Map Page */
+        .theme-toggle-map {
+            position: relative;
+            overflow: hidden;
+            padding: 10px !important;
+            border-radius: 50% !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        .theme-toggle-map:hover {
+            transform: rotate(15deg);
+        }
+        
+        .theme-toggle-map .sun-icon,
+        .theme-toggle-map .moon-icon {
+            transition: all 0.3s ease;
+        }
+        
+        [data-theme="dark"] .theme-toggle-map .sun-icon { display: block; }
+        [data-theme="dark"] .theme-toggle-map .moon-icon { display: none; }
+        [data-theme="light"] .theme-toggle-map .sun-icon { display: none; }
+        [data-theme="light"] .theme-toggle-map .moon-icon { display: block; }
+        
+        .map-instructions {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            background: var(--accent);
+            border-radius: var(--radius);
+            color: white;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        .map-instructions svg {
+            flex-shrink: 0;
+        }
+        
+        /* Data Panel - Resizable */
+        .data-panel {
+            width: 400px;
+            min-width: 320px;
+            max-width: 600px;
+            background: var(--bg-panel);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .panel-resize-handle {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 6px;
+            cursor: ew-resize;
+            background: transparent;
+            z-index: 10;
+            transition: background 0.2s;
+        }
+        
+        .panel-resize-handle:hover,
+        .panel-resize-handle.active {
+            background: var(--accent);
+        }
+        
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .float-badge {
+            padding: 4px 10px;
+            background: var(--accent);
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 24px 16px;
+            color: var(--text-muted);
+        }
+        
+        .empty-state.hidden,
+        .loading-spinner.hidden {
+            display: none !important;
+        }
+        
+        .empty-state svg {
+            margin-bottom: 10px;
+            opacity: 0.4;
+            width: 40px;
+            height: 40px;
+        }
+        
+        .empty-state h3 {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+        
+        .empty-state p {
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        /* Float Info */
+        .float-info {
+            margin-bottom: 20px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        
+        .info-item {
+            padding: 12px;
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+        }
+        
+        .info-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        
+        .info-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        /* Profile Chart */
+        .profile-section {
+            margin-top: 20px;
+        }
+        
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* Chart Type Tabs */
+        .chart-type-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .chart-type-tab {
+            padding: 6px 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .chart-type-tab:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .chart-type-tab.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+        
+        .profile-chart {
+            height: 200px;
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+            padding: 10px;
+        }
+        
+        /* Trajectory Info */
+        .trajectory-section {
+            margin-top: 20px;
+        }
+        
+        .trajectory-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .traj-stat {
+            padding: 12px;
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+            text-align: center;
+        }
+        
+        .traj-stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        
+        .traj-stat-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+        
+        /* Action Buttons */
+        .panel-actions {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+        }
+        
+        .action-button {
+            flex: 1;
+            padding: 10px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        
+        .action-button:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent);
+        }
+        
+        .action-button.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+        
+        .action-button.primary:hover {
+            background: var(--accent-hover);
+        }
+        
+        /* Click Marker Popup */
+        .leaflet-popup-content-wrapper {
+            background: var(--bg-panel);
+            color: var(--text-primary);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .leaflet-popup-content {
+            margin: 12px 16px;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .leaflet-popup-tip {
+            background: var(--bg-panel);
+        }
+        
+        .popup-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: var(--accent);
+        }
+        
+        .popup-info {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        
+        /* Date Range Filter */
+        .date-range-filter {
+            padding: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 16px;
+        }
+        
+        .date-range-filter .section-title {
+            margin-bottom: 12px;
+        }
+        
+        .date-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .date-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .date-input-group label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+        
+        .date-input-group input[type="month"] {
+            padding: 8px 10px;
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 12px;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .date-input-group input[type="month"]:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        .date-range-info {
+            margin-top: 10px;
+            padding: 8px 10px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: var(--radius-sm);
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+        
+        /* Trajectory Date Picker Modal */
+        .traj-date-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+        }
+        
+        .traj-date-modal.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .traj-date-modal-content {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            width: 90%;
+            max-width: 360px;
+            transform: scale(0.9);
+            transition: transform 0.2s ease;
+        }
+        
+        .traj-date-modal.visible .traj-date-modal-content {
+            transform: scale(1);
+        }
+        
+        .traj-date-modal h3 {
+            margin: 0 0 8px 0;
+            font-size: 16px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .traj-date-modal p {
+            margin: 0 0 20px 0;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        
+        .traj-date-modal .date-inputs {
+            margin-bottom: 20px;
+        }
+        
+        .traj-date-modal .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        
+        .traj-date-modal .modal-btn {
+            padding: 10px 20px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .traj-date-modal .modal-btn-cancel {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+        
+        .traj-date-modal .modal-btn-cancel:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .traj-date-modal .modal-btn-confirm {
+            background: var(--accent);
+            border: 1px solid var(--accent);
+            color: white;
+        }
+        
+        .traj-date-modal .modal-btn-confirm:hover {
+            background: var(--accent-hover);
+        }
+
+        /* Nearby Floats List */
+        .nearby-floats {
+            margin-top: 16px;
+        }
+        
+        .float-item {
+            padding: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .float-item:hover {
+            border-color: var(--accent);
+            background: var(--bg-hover);
+            transform: scale(1.05);
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+            z-index: 10;
+        }
+        
+        .float-item.selected {
+            border-color: var(--accent);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05));
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+        
+        .float-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        
+        .float-item-id {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .float-item-distance {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+        
+        .float-item-details {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        /* Loading State */
+        .loading-spinner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        
+        .spinner {
+            width: 28px;
+            height: 28px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            margin-top: 12px;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+        
+        /* Status Indicator */
+        .map-status {
+            position: absolute;
+            bottom: 16px;
+            left: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: var(--bg-panel);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 12px;
+            color: var(--text-secondary);
+            z-index: 1000;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+        }
+        
+        .status-dot.online {
+            background: var(--success);
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+        }
+        
+        /* Clicked Location Styles */
+        .clicked-location {
+            margin-bottom: 16px;
+            padding: 14px;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05));
+            border: 1px solid var(--accent);
+            border-radius: var(--radius);
+        }
+        
+        .location-info {
+            margin-top: 10px;
+        }
+        
+        .location-coords {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        
+        .location-ocean {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        /* Enhanced Profile Chart */
+        .profile-chart {
+            height: 220px;
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            border: 1px solid var(--border);
+        }
+        
+        /* Summary Stats */
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .summary-stat {
+            padding: 10px;
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        
+        .summary-stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        
+        .summary-stat-label {
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+        
+        /* Float item selected state */
+        .float-item.selected {
+            border-color: var(--accent);
+            background: var(--bg-active);
+        }
+        
+        /* Back to floats button */
+        .back-to-floats {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+        
+        .back-to-floats:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        /* Float item selected state */
+        .float-item.selected {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1));
+            border-color: var(--accent);
+        }
+        
+        /* Two-panel layout when float selected */
+        .float-data.split-view {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .float-data.split-view .nearby-floats {
+            max-height: 200px;
+            overflow-y: auto;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+        
+        /* Collapsible sections */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding: 8px 0;
+        }
+        
+        .section-header .toggle-icon {
+            transition: transform 0.2s;
+        }
+        
+        .section-header.collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+        
+        .section-content.collapsed {
+            display: none;
+        }
+        
+        /* ========================================
+           Mobile Responsive Styles for Map Page
+           ======================================== */
+        
+        /* Tablet */
+        @media (max-width: 1024px) {
+            .data-panel {
+                width: 350px;
+                min-width: 300px;
+            }
+            
+            .map-topbar {
+                right: 360px;
+            }
+            
+            .info-grid {
+                gap: 10px;
+            }
+            
+            .summary-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        /* Mobile */
+        @media (max-width: 768px) {
+            .map-page {
+                flex-direction: column;
+            }
+            
+            .map-main {
+                height: 50vh;
+                min-height: 250px;
+            }
+            
+            .map-topbar {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .back-btn {
+                padding: 8px 12px;
+                font-size: 12px;
+                width: fit-content;
+            }
+            
+            .map-instructions {
+                padding: 10px 14px;
+                font-size: 12px;
+                line-height: 1.4;
+            }
+            
+            .map-instructions svg {
+                display: none;
+            }
+            
+            .map-status {
+                bottom: 10px;
+                left: 10px;
+                padding: 6px 10px;
+                font-size: 11px;
+            }
+            
+            /* Data Panel - Bottom sheet on mobile */
+            .data-panel {
+                width: 100%;
+                min-width: 100%;
+                max-width: 100%;
+                height: 50vh;
+                border-left: none;
+                border-top: 1px solid var(--border);
+                border-radius: 16px 16px 0 0;
+            }
+            
+            .panel-resize-handle {
+                display: none;
+            }
+            
+            /* Add drag handle indicator for mobile */
+            .panel-header::before {
+                content: '';
+                position: absolute;
+                top: 8px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 40px;
+                height: 4px;
+                background: var(--border-hover);
+                border-radius: 2px;
+            }
+            
+            .panel-header {
+                position: relative;
+                padding: 20px 16px 12px;
+            }
+            
+            .panel-title {
+                font-size: 15px;
+            }
+            
+            .panel-content {
+                padding: 12px;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            
+            .info-item {
+                padding: 10px;
+            }
+            
+            .info-label {
+                font-size: 9px;
+            }
+            
+            .info-value {
+                font-size: 13px;
+            }
+            
+            .section-title {
+                font-size: 13px;
+                margin-bottom: 10px;
+            }
+            
+            .chart-type-tabs {
+                gap: 4px;
+                margin-bottom: 10px;
+            }
+            
+            .chart-type-tab {
+                padding: 6px 8px;
+                font-size: 10px;
+            }
+            
+            .profile-chart {
+                height: 160px;
+                padding: 8px;
+            }
+            
+            .trajectory-stats {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            
+            .traj-stat {
+                padding: 10px;
+            }
+            
+            .traj-stat-value {
+                font-size: 16px;
+            }
+            
+            .traj-stat-label {
+                font-size: 8px;
+            }
+            
+            .summary-stats {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+            }
+            
+            .summary-stat {
+                padding: 8px;
+            }
+            
+            .summary-stat-value {
+                font-size: 14px;
+            }
+            
+            .summary-stat-label {
+                font-size: 8px;
+            }
+            
+            .float-item {
+                padding: 10px;
+                margin-bottom: 6px;
+            }
+            
+            .float-item-id {
+                font-size: 13px;
+            }
+            
+            .float-item-distance {
+                font-size: 10px;
+            }
+            
+            .float-item-details {
+                font-size: 11px;
+            }
+            
+            .panel-actions {
+                padding: 12px;
+                gap: 8px;
+            }
+            
+            .action-button {
+                padding: 10px 12px;
+                font-size: 11px;
+            }
+            
+            .empty-state {
+                padding: 20px 12px;
+            }
+            
+            .empty-state svg {
+                width: 32px;
+                height: 32px;
+            }
+            
+            .empty-state h3 {
+                font-size: 13px;
+            }
+            
+            .empty-state p {
+                font-size: 11px;
+            }
+            
+            .clicked-location {
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+            
+            .location-coords {
+                font-size: 14px;
+            }
+            
+            .location-ocean {
+                font-size: 11px;
+            }
+            
+            .back-to-floats {
+                padding: 8px 10px;
+                font-size: 11px;
+            }
+            
+            /* Popup styles */
+            .leaflet-popup-content {
+                margin: 10px 12px;
+            }
+            
+            .popup-title {
+                font-size: 13px;
+            }
+            
+            .popup-info {
+                font-size: 11px;
+            }
+        }
+        
+        /* Small Mobile */
+        @media (max-width: 480px) {
+            .map-main {
+                height: 45vh;
+                min-height: 200px;
+            }
+            
+            .data-panel {
+                height: 55vh;
+            }
+            
+            .map-topbar {
+                top: 8px;
+                left: 8px;
+                right: 8px;
+            }
+            
+            .back-btn {
+                padding: 6px 10px;
+                font-size: 11px;
+            }
+            
+            .map-instructions {
+                padding: 8px 12px;
+                font-size: 11px;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .summary-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .trajectory-stats {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .chart-type-tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                padding-bottom: 4px;
+            }
+            
+            .chart-type-tab {
+                flex-shrink: 0;
+            }
+            
+            .profile-chart {
+                height: 140px;
+            }
+        }
+        
+        /* Landscape Mobile */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .map-page {
+                flex-direction: row;
+            }
+            
+            .map-main {
+                width: 55%;
+                height: 100vh;
+            }
+            
+            .data-panel {
+                width: 45%;
+                height: 100vh;
+                border-radius: 0;
+                border-left: 1px solid var(--border);
+                border-top: none;
+            }
+            
+            .panel-header::before {
+                display: none;
+            }
+            
+            .panel-header {
+                padding: 12px 16px;
+            }
+            
+            .map-topbar {
+                right: auto;
+                max-width: calc(55% - 20px);
+            }
+            
+            .profile-chart {
+                height: 120px;
+            }
+        }
+        
+        /* Touch-friendly for map page */
+        @media (hover: none) and (pointer: coarse) {
+            .back-btn,
+            .chart-type-tab,
+            .action-button,
+            .float-item {
+                min-height: 44px;
+            }
+            
+            .chart-type-tab {
+                padding: 10px 12px;
+            }
+            
+            .action-button {
+                padding: 12px 16px;
+            }
+            
+            .float-item {
+                padding: 12px;
+            }
+        }
+        
+        /* Enhanced Float Markers */
+        .float-marker {
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+        
+        .float-marker.active {
+            filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.6)) !important;
+        }
+        
+        @keyframes markerPulse {
+            0% {
+                r: 0;
+                stroke-width: 2;
+                opacity: 0.8;
+            }
+            100% {
+                r: 20;
+                stroke-width: 0;
+                opacity: 0;
+            }
+        }
+        
+        .float-marker-pulse {
+            animation: markerPulse 2s ease-out infinite;
+        }
+        
+        /* Layer Control Panel */
+        .map-layer-control {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: var(--bg-panel);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            width: 280px;
+            max-height: 70vh;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .layer-control-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .layer-control-section {
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .layer-control-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .layer-section-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .layer-control-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 0;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        
+        .layer-control-item:hover {
+            opacity: 0.8;
+        }
+        
+        .layer-control-checkbox,
+        .layer-control-radio {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .layer-control-label {
+            font-size: 13px;
+            color: var(--text-primary);
+            cursor: pointer;
+            flex: 1;
+        }
+        
+        .layer-control-slider {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        
+        .layer-control-slider-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+        
+        .layer-control-value {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+        
+        /* Heatmap Layer */
+        .heatmap-legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: var(--bg-panel);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            z-index: 500;
+            pointer-events: none;
+        }
+        
+        .heatmap-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 4px 0;
+        }
+        
+        .heatmap-legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 2px;
+        }
+        
+        /* Marker Clustering Overrides for Dark Theme */
+        .leaflet-cluster-anim .leaflet-marker-icon,
+        .leaflet-cluster-anim .leaflet-marker-shadow {
+            animation: none;
+        }
+        
+        /* Custom Popup Styling */
+        .leaflet-popup-content {
+            color: var(--text-primary) !important;
+            font-size: 12px !important;
+            line-height: 1.5 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="map-page">
+        <!-- Main Map Area -->
+        <div class="map-main">
+            <div class="map-full" id="interactiveMap"></div>
+            
+            <!-- Top Bar -->
+            <div class="map-topbar">
+                <a href="/" class="back-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5m7-7-7 7 7 7"/>
+                    </svg>
+                    Back to Chat
+                </a>
+                <div class="map-instructions">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/>
+                    </svg>
+                    Click anywhere on the map to find nearby ARGO floats and view their data
+                </div>
+                <!-- Theme Toggle -->
+                <button class="back-btn theme-toggle-map" id="themeToggle" title="Toggle dark/light mode">
+                    <svg class="sun-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg class="moon-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Layer Control Panel -->
+            <div class="map-layer-control" id="layerControl">
+                <div class="layer-control-title">Map Layers</div>
+                
+                <!-- Toggle Layers -->
+                <div class="layer-control-section">
+                    <label class="layer-section-label">Visibility</label>
+                    <div class="layer-control-item">
+                        <input type="checkbox" id="layerFloatMarkers" class="layer-control-checkbox" checked>
+                        <label for="layerFloatMarkers" class="layer-control-label">Float Markers</label>
+                    </div>
+                    <div class="layer-control-item">
+                        <input type="checkbox" id="layerTrajectories" class="layer-control-checkbox" checked>
+                        <label for="layerTrajectories" class="layer-control-label">Trajectories</label>
+                    </div>
+                    <div class="layer-control-item">
+                        <input type="checkbox" id="layerTempHeatmap" class="layer-control-checkbox">
+                        <label for="layerTempHeatmap" class="layer-control-label">Temperature Heatmap</label>
+                    </div>
+                    <div class="layer-control-item">
+                        <input type="checkbox" id="layerSalinityHeatmap" class="layer-control-checkbox">
+                        <label for="layerSalinityHeatmap" class="layer-control-label">Salinity Heatmap</label>
+                    </div>
+                </div>
+                
+                <!-- Color By -->
+                <div class="layer-control-section">
+                    <label class="layer-section-label">Color By</label>
+                    <div class="layer-control-item">
+                        <input type="radio" id="colorTemp" name="colorBy" class="layer-control-radio" value="temperature" checked>
+                        <label for="colorTemp" class="layer-control-label">Temperature</label>
+                    </div>
+                    <div class="layer-control-item">
+                        <input type="radio" id="colorSalinity" name="colorBy" class="layer-control-radio" value="salinity">
+                        <label for="colorSalinity" class="layer-control-label">Salinity</label>
+                    </div>
+                    <div class="layer-control-item">
+                        <input type="radio" id="colorDepth" name="colorBy" class="layer-control-radio" value="depth">
+                        <label for="colorDepth" class="layer-control-label">Depth</label>
+                    </div>
+                </div>
+                
+                <!-- Size By -->
+                <div class="layer-control-section">
+                    <label class="layer-section-label">Size By</label>
+                    <div class="layer-control-item">
+                        <input type="radio" id="sizeDepth" name="sizeBy" class="layer-control-radio" value="depth" checked>
+                        <label for="sizeDepth" class="layer-control-label">Depth</label>
+                    </div>
+                    <div class="layer-control-item">
+                        <input type="radio" id="sizeAge" name="sizeBy" class="layer-control-radio" value="age">
+                        <label for="sizeAge" class="layer-control-label">Age</label>
+                    </div>
+                    <div class="layer-control-item">
+                        <input type="radio" id="sizeUniform" name="sizeBy" class="layer-control-radio" value="uniform">
+                        <label for="sizeUniform" class="layer-control-label">Uniform</label>
+                    </div>
+                </div>
+                
+                <!-- Heatmap Opacity -->
+                <div class="layer-control-section">
+                    <div class="layer-control-slider-label">
+                        <span>Heatmap Opacity</span>
+                        <span class="layer-control-value"><span id="heatmapOpacityValue">50</span>%</span>
+                    </div>
+                    <input type="range" id="heatmapOpacity" class="layer-control-slider" min="0" max="100" value="50">
+                </div>
+                
+                <!-- Marker Opacity -->
+                <div class="layer-control-section">
+                    <div class="layer-control-slider-label">
+                        <span>Marker Opacity</span>
+                        <span class="layer-control-value"><span id="markerOpacityValue">90</span>%</span>
+                    </div>
+                    <input type="range" id="markerOpacity" class="layer-control-slider" min="0" max="100" value="90">
+                </div>
+            </div>
+            
+            <!-- Status -->
+            <div class="map-status" id="mapStatus">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Connecting...</span>
+            </div>
+        </div>
+        
+        <!-- Data Panel -->
+        <div class="data-panel" id="dataPanel">
+            <div class="panel-resize-handle" id="resizeHandle"></div>
+            <div class="panel-header">
+                <span class="panel-title" id="panelTitle">Float Data</span>
+                <span class="float-badge hidden" id="floatBadge"></span>
+            </div>
+            
+            <div class="panel-content" id="panelContent">
+                <!-- Date Range Filter - Always visible -->
+                <div class="date-range-filter" id="dateRangeFilter">
+                    <div class="section-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                        Time Filter
+                    </div>
+                    <div class="date-inputs">
+                        <div class="date-input-group">
+                            <label for="startDate">From</label>
+                            <input type="month" id="startDate" value="2025-01" min="2025-01" max="2026-01">
+                        </div>
+                        <div class="date-input-group">
+                            <label for="endDate">To</label>
+                            <input type="month" id="endDate" value="2026-01" min="2025-01" max="2026-01">
+                        </div>
+                    </div>
+                    <div class="date-range-info" id="dateRangeInfo">
+                        📅 Showing floats from <strong>Jan 2025</strong> to <strong>Jan 2026</strong>
+                    </div>
+                </div>
+                
+                <!-- Empty State - Only shown initially -->
+                <div class="empty-state" id="emptyState">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+                        <circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    <h3>Click on the Map</h3>
+                    <p>Click any ocean location to find nearby floats</p>
+                </div>
+                
+                <!-- Loading State - Hidden properly -->
+                <div class="loading-spinner hidden" id="loadingState">
+                    <div class="spinner"></div>
+                    <p>Searching for floats...</p>
+                </div>
+                
+                <!-- Clicked Location Info -->
+                <div class="clicked-location hidden" id="clickedLocation">
+                    <div class="section-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+                            <circle cx="12" cy="10" r="3"/>
+                        </svg>
+                        Selected Location
+                    </div>
+                    <div class="location-info">
+                        <div class="location-coords" id="locationCoords"></div>
+                        <div class="location-ocean" id="locationOcean"></div>
+                    </div>
+                </div>
+                
+                <!-- Float Data -->
+                <div class="float-data hidden" id="floatData">
+                    <!-- Nearby Floats -->
+                    <div class="nearby-floats" id="nearbyFloats">
+                        <div class="section-title">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+                                <circle cx="12" cy="10" r="3"/>
+                            </svg>
+                            Nearby Floats
+                        </div>
+                        <div id="floatList"></div>
+                    </div>
+                    
+                    <!-- Float Info (shown when float selected) -->
+                    <div class="float-info hidden" id="floatInfo">
+                        <div class="section-title">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 16v-4m0-4h.01"/>
+                            </svg>
+                            Float Details
+                        </div>
+                        <div class="info-grid" id="infoGrid"></div>
+                    </div>
+                    
+                    <!-- Profile Chart with Type Selection -->
+                    <div class="profile-section hidden" id="profileSection">
+                        <div class="section-title">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 20V10m-6 10V4M6 20v-6"/>
+                            </svg>
+                            Data Visualization
+                        </div>
+                        <div class="chart-type-tabs" id="chartTypeTabs">
+                            <button class="chart-type-tab active" data-chart="temp-time">🌡️ Temp/Time</button>
+                            <button class="chart-type-tab" data-chart="sal-time">🧪 Sal/Time</button>
+                            <button class="chart-type-tab" data-chart="temp-sal">📊 Temp vs Sal</button>
+                            <button class="chart-type-tab" data-chart="all-time">📈 All/Time</button>
+                        </div>
+                        <div class="profile-chart">
+                            <canvas id="profileChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Trajectory Stats -->
+                    <div class="trajectory-section hidden" id="trajectorySection">
+                        <div class="section-title">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                            </svg>
+                            Trajectory
+                        </div>
+                        <div class="trajectory-stats" id="trajectoryStats"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="panel-actions hidden" id="panelActions">
+                <button class="action-button" id="viewTrajectoryBtn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                    Trajectory
+                </button>
+                <button class="action-button" id="viewProfileBtn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 20V10m-6 10V4M6 20v-6"/>
+                    </svg>
+                    Profile
+                </button>
+                <button class="action-button primary" id="exportBtn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4m4-5l5 5 5-5m-5 5V3"/>
+                    </svg>
+                    Export
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Trajectory Date Picker Modal -->
+    <div class="traj-date-modal" id="trajDateModal">
+        <div class="traj-date-modal-content">
+            <h3>📍 Select Trajectory Period</h3>
+            <p id="trajModalFloatName">Float trajectory for: <strong></strong></p>
+            <div class="date-inputs">
+                <div class="date-input-group">
+                    <label for="trajStartDate">From</label>
+                    <input type="month" id="trajStartDate" value="2025-01" min="2025-01" max="2026-01">
+                </div>
+                <div class="date-input-group">
+                    <label for="trajEndDate">To</label>
+                    <input type="month" id="trajEndDate" value="2026-01" min="2025-01" max="2026-01">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" id="trajModalCancel">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" id="trajModalConfirm">Show Trajectory</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // ========================================
+        // Interactive Map Explorer
+        // ========================================
+        
+        const API_BASE = '';
+        let map, chart;
+        let markers = [];
+        let trajectoryPath = null;
+        let trajectoryMarkers = [];
+        let clickMarker = null;
+        let currentFloatData = [];
+        let selectedFloatId = null;
+        let floatGroups = {};
+        let clickedLat = null;
+        let clickedLng = null;
+        let startDateFilter = '2025-01';
+        let endDateFilter = '2026-01';
+        
+        // Enhanced Map Features
+        let heatmapLayer = null;
+        let heatmapData = [];
+        let markerClusterGroup = null;
+        let mapSettings = {
+            showFloatMarkers: true,
+            showTrajectories: true,
+            showTempHeatmap: false,
+            showSalinityHeatmap: false,
+            colorBy: 'temperature',
+            sizeBy: 'depth',
+            heatmapOpacity: 0.5,
+            markerOpacity: 0.9
+        };
+        
+        // Ocean detection based on coordinates
+        function detectOcean(lat, lon) {
+            if (lat >= -35 && lat <= 30 && lon >= 30 && lon <= 120) return "Indian Ocean Region";
+            if (lat >= -60 && lat <= 60 && lon >= 100 && lon <= 180) return "Pacific Ocean Region";
+            if (lat >= -60 && lat <= 60 && lon >= -80 && lon <= 0) return "Atlantic Ocean Region";
+            if (lat >= 30 && lat <= 46 && lon >= -6 && lon <= 36) return "Mediterranean Sea";
+            if (lat >= 10 && lat <= 22 && lon >= -88 && lon <= -60) return "Caribbean Sea";
+            if (lat <= -40) return "Southern Ocean";
+            return "Ocean Region";
+        }
+        
+        // DOM Elements
+        const $ = id => document.getElementById(id);
+        const el = {
+            map: $('interactiveMap'),
+            dataPanel: $('dataPanel'),
+            resizeHandle: $('resizeHandle'),
+            statusDot: $('statusDot'),
+            statusText: $('statusText'),
+            panelTitle: $('panelTitle'),
+            floatBadge: $('floatBadge'),
+            panelContent: $('panelContent'),
+            emptyState: $('emptyState'),
+            loadingState: $('loadingState'),
+            clickedLocation: $('clickedLocation'),
+            locationCoords: $('locationCoords'),
+            locationOcean: $('locationOcean'),
+            floatData: $('floatData'),
+            nearbyFloats: $('nearbyFloats'),
+            floatList: $('floatList'),
+            floatInfo: $('floatInfo'),
+            infoGrid: $('infoGrid'),
+            profileSection: $('profileSection'),
+            profileChart: $('profileChart'),
+            trajectorySection: $('trajectorySection'),
+            trajectoryStats: $('trajectoryStats'),
+            panelActions: $('panelActions'),
+            viewTrajectoryBtn: $('viewTrajectoryBtn'),
+            viewProfileBtn: $('viewProfileBtn'),
+            exportBtn: $('exportBtn')
+        };
+        
+        // Theme Management
+        const THEME_KEY = 'floatchart_theme';
+        
+        function initTheme() {
+            const saved = localStorage.getItem(THEME_KEY);
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = saved || (prefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+        
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem(THEME_KEY, next);
+        }
+        
+        // Initialize theme immediately
+        initTheme();
+        
+        // Theme toggle button listener
+        document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
+        
+        /* ============ ENHANCED MAP FEATURES FUNCTIONS ============ */
+        
+        // Get color for value based on color scheme
+        function getColorForValue(value, type = 'temperature', minVal = null, maxVal = null) {
+            let colors = [];
+            if (type === 'temperature') {
+                colors = ['#0369a1', '#0ea5e9', '#06b6d4', '#10b981', '#fbbf24', '#f97316', '#ea580c'];
+                if (minVal === null) minVal = 0;
+                if (maxVal === null) maxVal = 30;
+            } else if (type === 'salinity') {
+                colors = ['#1e40af', '#3b82f6', '#06b6d4', '#14b8a6', '#22c55e'];
+                if (minVal === null) minVal = 33;
+                if (maxVal === null) maxVal = 36;
+            } else if (type === 'depth') {
+                colors = ['#86efac', '#bfdbfe', '#60a5fa', '#0284c7', '#1e40af'];
+                if (minVal === null) minVal = 0;
+                if (maxVal === null) maxVal = 5000;
+            }
+            
+            if (value < minVal) value = minVal;
+            if (value > maxVal) value = maxVal;
+            
+            const normalized = (value - minVal) / (maxVal - minVal);
+            const colorIndex = Math.floor(normalized * (colors.length - 1));
+            return colors[colorIndex];
+        }
+        
+        // Get marker size based on depth
+        function getMarkerSize(depth, sizeBy = 'depth') {
+            if (sizeBy === 'depth') {
+                if (depth < 500) return 4;
+                if (depth < 1000) return 6;
+                if (depth < 2000) return 8;
+                return 10;
+            } else if (sizeBy === 'age') {
+                return 6 + Math.random() * 4;
+            }
+            return 6;
+        }
+        
+        // Create enhanced marker with temperature coloring
+        function createEnhancedMarker(lat, lng, data, floatId) {
+            const size = getMarkerSize(data.depth || 1000, mapSettings.sizeBy);
+            const color = getColorForValue(data.temperature || 15, mapSettings.colorBy);
+            
+            const marker = L.circleMarker([lat, lng], {
+                radius: size,
+                fillColor: color,
+                fillOpacity: mapSettings.markerOpacity,
+                color: 'white',
+                weight: 2,
+                className: 'float-marker'
+            });
+            
+            // Enhanced popup content
+            marker.bindPopup(`
+                <div class="popup-title">Float ${floatId}</div>
+                <div class="popup-info">
+                    <strong>Position:</strong><br>
+                    Lat: ${lat.toFixed(4)}°<br>
+                    Lon: ${lng.toFixed(4)}°<br>
+                    <strong>Data:</strong><br>
+                    Temp: ${data.temperature?.toFixed(2) || 'N/A'}°C<br>
+                    Sal: ${data.salinity?.toFixed(2) || 'N/A'} PSU<br>
+                    Depth: ${data.depth?.toFixed(0) || 'N/A'} m<br>
+                    <strong>Time:</strong><br>
+                    ${new Date(data.timestamp).toLocaleString()}
+                </div>
+            `);
+            
+            return marker;
+        }
+        
+        // Build heatmap data from floats
+        function buildHeatmapData(data, type = 'temperature') {
+            const heatData = [];
+            data.forEach(d => {
+                if (d.latitude && d.longitude) {
+                    const value = type === 'temperature' ? (d.temperature || 15) : (d.salinity || 35);
+                    heatData.push([d.latitude, d.longitude, value]);
+                }
+            });
+            return heatData;
+        }
+        
+        // Update heatmap layer
+        function updateHeatmapLayer(data, type = 'temperature') {
+            if (heatmapLayer) {
+                map.removeLayer(heatmapLayer);
+                heatmapLayer = null;
+            }
+            
+            if (!mapSettings.showTempHeatmap && !mapSettings.showSalinityHeatmap) {
+                return;
+            }
+            
+            const heatData = buildHeatmapData(data, type);
+            if (heatData.length > 0) {
+                heatmapLayer = L.heatLayer(heatData, {
+                    radius: 25,
+                    blur: 15,
+                    maxZoom: 17,
+                    max: type === 'temperature' ? 30 : 36,
+                    min: type === 'temperature' ? 0 : 33,
+                    gradient: {
+                        0.0: '#0369a1',
+                        0.2: '#0ea5e9',
+                        0.4: '#10b981',
+                        0.6: '#fbbf24',
+                        0.8: '#f97316',
+                        1.0: '#ea580c'
+                    }
+                });
+                heatmapLayer.addTo(map);
+                if (heatmapLayer._canvas) {
+                    heatmapLayer._canvas.style.opacity = mapSettings.heatmapOpacity;
+                }
+            }
+        }
+        
+        // Initialize layer control listeners
+        function initLayerControls() {
+            const controls = [
+                'layerFloatMarkers', 'layerTrajectories', 'layerTempHeatmap', 'layerSalinityHeatmap',
+                'colorTemp', 'colorSalinity', 'colorDepth',
+                'sizeDepth', 'sizeAge', 'sizeUniform',
+                'heatmapOpacity', 'markerOpacity'
+            ];
+            
+            controls.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                
+                if (el.type === 'checkbox') {
+                    el.addEventListener('change', (e) => handleLayerToggle(e.target.id));
+                } else if (el.type === 'radio') {
+                    el.addEventListener('change', (e) => handleLayerChange(e.target.name, e.target.value));
+                } else if (el.type === 'range') {
+                    el.addEventListener('input', (e) => handleSliderChange(e.target.id, e.target.value));
+                }
+            });
+        }
+        
+        // Handle layer toggle
+        function handleLayerToggle(id) {
+            const element = document.getElementById(id);
+            if (!element) return;
+            
+            if (id === 'layerFloatMarkers') mapSettings.showFloatMarkers = element.checked;
+            else if (id === 'layerTrajectories') mapSettings.showTrajectories = element.checked;
+            else if (id === 'layerTempHeatmap') mapSettings.showTempHeatmap = element.checked;
+            else if (id === 'layerSalinityHeatmap') mapSettings.showSalinityHeatmap = element.checked;
+            
+            // Refresh markers/heatmaps
+            clearMarkers();
+            if (currentFloatData.length > 0) {
+                plotFloatMarkers(currentFloatData);
+                updateHeatmapLayer(currentFloatData, mapSettings.showTempHeatmap ? 'temperature' : 'salinity');
+            }
+        }
+        
+        // Handle layer change (color/size by)
+        function handleLayerChange(name, value) {
+            if (name === 'colorBy') mapSettings.colorBy = value;
+            else if (name === 'sizeBy') mapSettings.sizeBy = value;
+            
+            // Refresh markers
+            clearMarkers();
+            if (currentFloatData.length > 0) {
+                plotFloatMarkers(currentFloatData);
+            }
+        }
+        
+        // Handle slider change
+        function handleSliderChange(id, value) {
+            const numValue = parseInt(value) / 100;
+            if (id === 'heatmapOpacity') {
+                mapSettings.heatmapOpacity = numValue;
+                document.getElementById('heatmapOpacityValue').textContent = value;
+                if (heatmapLayer && heatmapLayer._canvas) {
+                    heatmapLayer._canvas.style.opacity = numValue;
+                }
+            } else if (id === 'markerOpacity') {
+                mapSettings.markerOpacity = numValue;
+                document.getElementById('markerOpacityValue').textContent = value;
+                clearMarkers();
+                if (currentFloatData && currentFloatData.length > 0) {
+                    plotFloatMarkers(currentFloatData);
+                }
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            checkStatus();
+            initEventListeners();
+            initLayerControls();
+            initResizeHandle();
+        });
+        
+        function initResizeHandle() {
+            let isResizing = false;
+            let startX, startWidth;
+            
+            el.resizeHandle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                startX = e.clientX;
+                startWidth = el.dataPanel.offsetWidth;
+                el.resizeHandle.classList.add('active');
+                document.body.style.cursor = 'ew-resize';
+                document.body.style.userSelect = 'none';
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const diff = startX - e.clientX;
+                const newWidth = Math.min(600, Math.max(320, startWidth + diff));
+                el.dataPanel.style.width = newWidth + 'px';
+            });
+            
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    el.resizeHandle.classList.remove('active');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            });
+        }
+        
+        function addTemperatureLegendToMap() {
+            if (!map) return;
+            
+            const legend = L.control({ position: 'bottomleft' });
+            
+            legend.onAdd = function() {
+                const div = L.DomUtil.create('div', 'temperature-legend');
+                div.innerHTML = `
+                    <div class="legend-title">🌡️ Temperature</div>
+                    <div class="legend-gradient"></div>
+                    <div class="legend-labels">
+                        <span>Cold<br><15°C</span>
+                        <span>Cool<br>15-20°C</span>
+                        <span>Warm<br>20-25°C</span>
+                        <span>Hot<br>>25°C</span>
+                    </div>
+                `;
+                return div;
+            };
+            
+            legend.addTo(map);
+        }
+        
+        function initMap() {
+            map = L.map(el.map, {
+                center: [10, 75],
+                zoom: 5,
+                zoomControl: true,
+                attributionControl: false
+            });
+            
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19
+            }).addTo(map);
+            
+            // Add temperature legend
+            addTemperatureLegendToMap();
+            
+            // Map click handler
+            map.on('click', onMapClick);
+        }
+        
+        function initEventListeners() {
+            el.viewTrajectoryBtn.addEventListener('click', () => loadFullTrajectory());
+            el.viewProfileBtn.addEventListener('click', () => loadFullProfile());
+            el.exportBtn.addEventListener('click', exportData);
+            
+            // Date range filter listeners
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+            const dateRangeInfo = document.getElementById('dateRangeInfo');
+            
+            function updateDateRangeInfo() {
+                const startMonth = new Date(startDateInput.value + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                const endMonth = new Date(endDateInput.value + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                dateRangeInfo.innerHTML = `📅 Showing floats from <strong>${startMonth}</strong> to <strong>${endMonth}</strong>`;
+                startDateFilter = startDateInput.value;
+                endDateFilter = endDateInput.value;
+            }
+            
+            startDateInput.addEventListener('change', () => {
+                // Ensure start is not after end
+                if (startDateInput.value > endDateInput.value) {
+                    endDateInput.value = startDateInput.value;
+                }
+                updateDateRangeInfo();
+                // Re-query if location already clicked
+                if (clickedLat !== null && clickedLng !== null) {
+                    onMapClick({ latlng: { lat: clickedLat, lng: clickedLng } });
+                }
+            });
+            
+            endDateInput.addEventListener('change', () => {
+                // Ensure end is not before start
+                if (endDateInput.value < startDateInput.value) {
+                    startDateInput.value = endDateInput.value;
+                }
+                updateDateRangeInfo();
+                // Re-query if location already clicked
+                if (clickedLat !== null && clickedLng !== null) {
+                    onMapClick({ latlng: { lat: clickedLat, lng: clickedLng } });
+                }
+            });
+            
+            updateDateRangeInfo();
+            
+            // Setup trajectory date picker modal
+            setupTrajectoryModal();
+        }
+        
+        // Setup trajectory date picker modal
+        function setupTrajectoryModal() {
+            const modal = document.getElementById('trajDateModal');
+            const trajStartDate = document.getElementById('trajStartDate');
+            const trajEndDate = document.getElementById('trajEndDate');
+            const cancelBtn = document.getElementById('trajModalCancel');
+            const confirmBtn = document.getElementById('trajModalConfirm');
+            const floatNameEl = document.getElementById('trajModalFloatName');
+            
+            // Cancel button - close modal
+            cancelBtn.addEventListener('click', () => {
+                modal.classList.remove('visible');
+            });
+            
+            // Click outside to close
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('visible');
+                }
+            });
+            
+            // Confirm button - load trajectory with selected dates
+            confirmBtn.addEventListener('click', async () => {
+                const trajStart = trajStartDate.value;
+                const trajEnd = trajEndDate.value;
+                
+                // Validate
+                if (trajStart > trajEnd) {
+                    alert('Start date must be before end date');
+                    return;
+                }
+                
+                modal.classList.remove('visible');
+                await fetchAndShowTrajectory(trajStart, trajEnd);
+            });
+        }
+        
+        // Show trajectory date picker modal
+        function showTrajectoryModal() {
+            if (!selectedFloatId) {
+                alert('Please select a float first');
+                return;
+            }
+            
+            const modal = document.getElementById('trajDateModal');
+            const floatNameEl = document.getElementById('trajModalFloatName');
+            
+            // Set float name in modal
+            floatNameEl.innerHTML = `Trajectory for Float: <strong>${selectedFloatId}</strong>`;
+            
+            // Show modal
+            modal.classList.add('visible');
+        }
+        
+        // Fetch and show trajectory for selected date range
+        async function fetchAndShowTrajectory(trajStartFilter, trajEndFilter) {
+            if (!selectedFloatId) return;
+            
+            // Filter function for these specific dates
+            function filterByTrajDates(data) {
+                if (!data || data.length === 0) return [];
+                const startDate = new Date(trajStartFilter + '-01');
+                const endDate = new Date(trajEndFilter + '-28');
+                endDate.setMonth(endDate.getMonth() + 1);
+                return data.filter(d => {
+                    if (!d.timestamp) return false;
+                    const ts = new Date(d.timestamp);
+                    return ts >= startDate && ts <= endDate;
+                });
+            }
+            
+            // Try existing data first
+            const existingData = floatGroups[selectedFloatId];
+            const filteredExisting = filterByTrajDates(existingData);
+            
+            if (filteredExisting && filteredExisting.length >= 2) {
+                showTrajectory(filteredExisting);
+                return;
+            }
+            
+            try {
+                // Show loading
+                el.viewTrajectoryBtn.disabled = true;
+                el.viewTrajectoryBtn.innerHTML = '<div class="spinner" style="width:14px;height:14px;"></div> Loading...';
+                
+                // Fetch trajectory from API with selected date filter
+                const startDate = `${trajStartFilter}-01`;
+                const endDate = `${trajEndFilter}-28`;
+                const response = await fetch(`${API_BASE}/api/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        query: `all data for float ${selectedFloatId} between ${startDate} and ${endDate}` 
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.data && result.data.length > 0) {
+                    const filteredData = filterByTrajDates(result.data);
+                    // Cache all data for future use
+                    if (!floatGroups[selectedFloatId]) {
+                        floatGroups[selectedFloatId] = result.data;
+                    } else {
+                        // Merge new data
+                        const existingIds = new Set(floatGroups[selectedFloatId].map(d => d.timestamp));
+                        result.data.forEach(d => {
+                            if (!existingIds.has(d.timestamp)) {
+                                floatGroups[selectedFloatId].push(d);
+                            }
+                        });
+                    }
+                    
+                    if (filteredData.length >= 2) {
+                        showTrajectory(filteredData);
+                    } else {
+                        const startMonth = new Date(trajStartFilter + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                        const endMonth = new Date(trajEndFilter + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                        alert(`Not enough data points for trajectory between ${startMonth} and ${endMonth}. Need at least 2 points.`);
+                    }
+                } else {
+                    const startMonth = new Date(trajStartFilter + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                    const endMonth = new Date(trajEndFilter + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                    alert(`No trajectory data for float ${selectedFloatId} between ${startMonth} and ${endMonth}`);
+                }
+            } catch (error) {
+                console.error('Error loading trajectory:', error);
+                alert('Unable to load trajectory data. Please try again.');
+            } finally {
+                el.viewTrajectoryBtn.disabled = false;
+                el.viewTrajectoryBtn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                    Trajectory`;
+            }
+        }
+        
+        // Original loadFullTrajectory now shows the modal
+        function loadFullTrajectory() {
+            showTrajectoryModal();
+        }
+        
+        // Filter data array by the selected date range (for search filter)
+        function filterDataByDateRange(data) {
+            if (!data || data.length === 0) return [];
+            
+            const startDate = new Date(startDateFilter + '-01');
+            const endDate = new Date(endDateFilter + '-28');
+            endDate.setMonth(endDate.getMonth() + 1); // Include full end month
+            
+            return data.filter(d => {
+                if (!d.timestamp) return false;
+                const ts = new Date(d.timestamp);
+                return ts >= startDate && ts <= endDate;
+            });
+        }
+        
+        // Load full profile data for selected float (shows all available data)
+        async function loadFullProfile() {
+            if (!selectedFloatId) {
+                alert('Please select a float first');
+                return;
+            }
+            
+            // Use existing data if available
+            const existingData = floatGroups[selectedFloatId];
+            if (existingData && existingData.length > 0) {
+                showProfile(existingData);
+                return;
+            }
+            
+            try {
+                el.viewProfileBtn.disabled = true;
+                el.viewProfileBtn.innerHTML = '<div class="spinner" style="width:14px;height:14px;"></div> Loading...';
+                
+                // Fetch all profile data for this float
+                const response = await fetch(`${API_BASE}/api/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        query: `all data for float ${selectedFloatId}` 
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.data && result.data.length > 0) {
+                    floatGroups[selectedFloatId] = result.data;
+                    showProfile(result.data);
+                } else {
+                    alert(`No profile data found for float ${selectedFloatId}`);
+                }
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                alert('Unable to load profile data. Please try again.');
+            } finally {
+                el.viewProfileBtn.disabled = false;
+                el.viewProfileBtn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 20V10m-6 10V4M6 20v-6"/>
+                    </svg>
+                    Profile`;
+            }
+        }
+        
+        async function checkStatus() {
+            try {
+                const res = await fetch(`${API_BASE}/api/status`);
+                const data = await res.json();
+                
+                if (data.status === 'online' && data.database === 'connected') {
+                    el.statusDot.classList.add('online');
+                    el.statusText.textContent = `Connected • ${data.records?.toLocaleString() || 0} records`;
+                } else {
+                    el.statusText.textContent = 'Disconnected';
+                }
+            } catch (e) {
+                el.statusText.textContent = 'Offline';
+            }
+        }
+        
+        async function onMapClick(e) {
+            const { lat, lng } = e.latlng;
+            clickedLat = lat;
+            clickedLng = lng;
+            
+            // Clear previous markers
+            clearMarkers();
+            
+            // Add click marker (orange pulsing)
+            clickMarker = L.circleMarker([lat, lng], {
+                radius: 14,
+                fillColor: '#f59e0b',
+                fillOpacity: 0.9,
+                color: 'white',
+                weight: 3
+            }).addTo(map);
+            
+            const oceanName = detectOcean(lat, lng);
+            
+            clickMarker.bindPopup(`
+                <div class="popup-title">📍 Selected Location</div>
+                <div class="popup-info">
+                    <strong>${lat.toFixed(4)}°${lat >= 0 ? 'N' : 'S'}, ${lng.toFixed(4)}°${lng >= 0 ? 'E' : 'W'}</strong><br>
+                    ${oceanName}<br>
+                    <em>Searching for floats...</em>
+                </div>
+            `).openPopup();
+            
+            // Show loading
+            showLoading();
+            
+            // Show clicked location info immediately
+            el.clickedLocation.classList.remove('hidden');
+            el.locationCoords.textContent = `${lat.toFixed(4)}°${lat >= 0 ? 'N' : 'S'}, ${lng.toFixed(4)}°${lng >= 0 ? 'E' : 'W'}`;
+            
+            // Format date range for display
+            const startMonth = new Date(startDateFilter + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            const endMonth = new Date(endDateFilter + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            el.locationOcean.textContent = `${oceanName} • ${startMonth} - ${endMonth} • Searching...`;
+            
+            // Query for nearby floats with date filter
+            try {
+                const startDate = `${startDateFilter}-01`;
+                const endDate = `${endDateFilter}-28`;  // End of month approx
+                const question = `Find nearest 10 ARGO floats within 500km of latitude ${lat.toFixed(2)} longitude ${lng.toFixed(2)} between ${startDate} and ${endDate}`;
+                const res = await fetch(`${API_BASE}/api/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: question })
+                });
+                const result = await res.json();
+                
+                // Handle different response formats
+                let dataArray = [];
+                if (result.data && Array.isArray(result.data)) {
+                    dataArray = result.data;
+                } else if (result.results && Array.isArray(result.results)) {
+                    dataArray = result.results;
+                } else if (Array.isArray(result)) {
+                    dataArray = result;
+                }
+                
+                currentFloatData = dataArray;
+                
+                // Calculate numFloats AFTER getting data
+                const uniqueFloatIds = new Set(currentFloatData.map(d => d.float_id));
+                const numFloats = uniqueFloatIds.size;
+                
+                // Update location info with date range
+                el.locationOcean.textContent = `${oceanName} • ${startMonth} - ${endMonth} • ${numFloats} float(s)`;
+                
+                // Update click marker popup with date range
+                clickMarker.setPopupContent(`
+                    <div class="popup-title">📍 Selected Location</div>
+                    <div class="popup-info">
+                        <strong>${lat.toFixed(4)}°${lat >= 0 ? 'N' : 'S'}, ${lng.toFixed(4)}°${lng >= 0 ? 'E' : 'W'}</strong><br>
+                        ${oceanName}<br>
+                        <em style="color: #94a3b8;">📅 ${startMonth} - ${endMonth}</em><br>
+                        <strong style="color: #22c55e;">${currentFloatData.length} records from ${numFloats} float(s)</strong>
+                    </div>
+                `);
+                
+                console.log('Query result:', result);
+                console.log('Data array length:', currentFloatData.length);
+                console.log('Unique floats:', numFloats);
+                
+                if (currentFloatData.length > 0) {
+                    // Store float groups for trajectory
+                    floatGroups = {};
+                    currentFloatData.forEach(d => {
+                        const id = d.float_id || 'unknown';
+                        if (!floatGroups[id]) floatGroups[id] = [];
+                        floatGroups[id].push(d);
+                    });
+                    
+                    displayNearbyFloats(currentFloatData);
+                    plotFloatMarkers(currentFloatData);
+                } else {
+                    showEmptyResult();
+                }
+                
+            } catch (e) {
+                console.error('Query failed:', e);
+                showError();
+            }
+        }
+        
+        function clearMarkers() {
+            // Remove previous click marker
+            if (clickMarker) {
+                clickMarker.remove();
+                clickMarker = null;
+            }
+            // Remove float markers
+            markers.forEach(m => m.remove());
+            markers = [];
+            // Remove trajectory
+            if (trajectoryPath) {
+                trajectoryPath.remove();
+                trajectoryPath = null;
+            }
+            // Remove trajectory markers (start/end)
+            if (trajectoryMarkers) {
+                trajectoryMarkers.forEach(m => m.remove());
+                trajectoryMarkers = [];
+            }
+            // Reset selected float
+            selectedFloatId = null;
+        }
+        
+        function showLoading() {
+            el.emptyState.classList.add('hidden');
+            el.floatData.classList.add('hidden');
+            el.loadingState.classList.remove('hidden');
+            el.panelActions.classList.add('hidden');
+            el.floatBadge.classList.add('hidden');
+            el.panelTitle.textContent = 'Searching...';
+        }
+        
+        function showEmptyResult() {
+            el.loadingState.classList.add('hidden');
+            el.floatData.classList.add('hidden');
+            el.emptyState.classList.remove('hidden');
+            el.panelTitle.textContent = 'No Results';
+            el.emptyState.querySelector('h3').textContent = 'No Floats Found';
+            el.emptyState.querySelector('p').textContent = 'No ARGO floats found within 500km of this location. Try clicking on a different area - we have data across all major oceans.';
+        }
+        
+        function showError() {
+            el.loadingState.classList.add('hidden');
+            el.emptyState.classList.remove('hidden');
+            el.panelTitle.textContent = 'Error';
+            el.emptyState.querySelector('h3').textContent = 'Connection Error';
+            el.emptyState.querySelector('p').textContent = 'Failed to fetch data. Please check your connection and try again.';
+        }
+        
+        function displayNearbyFloats(data) {
+            console.log('displayNearbyFloats called with', data.length, 'records');
+            
+            // Hide loading and empty state, show data section
+            el.loadingState.classList.add('hidden');
+            el.emptyState.classList.add('hidden');
+            el.floatData.classList.remove('hidden');
+            el.nearbyFloats.classList.remove('hidden');
+            el.floatInfo.classList.add('hidden');
+            el.profileSection.classList.add('hidden');
+            el.trajectorySection.classList.add('hidden');
+            el.panelActions.classList.add('hidden');
+            
+            // Group by float_id
+            const localFloatGroups = {};
+            data.forEach(d => {
+                const id = d.float_id || 'unknown';
+                if (!localFloatGroups[id]) localFloatGroups[id] = [];
+                localFloatGroups[id].push(d);
+            });
+            floatGroups = localFloatGroups;
+            
+            const numFloats = Object.keys(localFloatGroups).length;
+            console.log('Grouped into', numFloats, 'floats');
+            
+            el.panelTitle.textContent = `${numFloats} Float${numFloats !== 1 ? 's' : ''} Found`;
+            
+            // Calculate summary stats
+            const allTemps = data.filter(d => d.temperature != null).map(d => d.temperature);
+            const avgTemp = allTemps.length > 0 ? (allTemps.reduce((a,b) => a+b, 0) / allTemps.length).toFixed(1) : '--';
+            const allSals = data.filter(d => d.salinity != null).map(d => d.salinity);
+            const avgSal = allSals.length > 0 ? (allSals.reduce((a,b) => a+b, 0) / allSals.length).toFixed(2) : '--';
+            
+            // Create summary stats HTML
+            const summaryHTML = `
+                <div class="summary-stats">
+                    <div class="summary-stat">
+                        <div class="summary-stat-value">${numFloats}</div>
+                        <div class="summary-stat-label">Floats</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-value">${data.length}</div>
+                        <div class="summary-stat-label">Records</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-value">${avgTemp}°</div>
+                        <div class="summary-stat-label">Avg Temp</div>
+                    </div>
+                </div>
+            `;
+            
+            // Create float list
+            const floatListHTML = Object.entries(localFloatGroups).map(([id, points]) => {
+                const latest = points[points.length - 1];
+                const floatAvgTemp = points.reduce((a, b) => a + (b.temperature || 0), 0) / points.length;
+                return `
+                    <div class="float-item" data-float-id="${id}">
+                        <div class="float-item-header">
+                            <span class="float-item-id">🔵 Float ${id}</span>
+                            <span class="float-item-distance">${points.length} records</span>
+                        </div>
+                        <div class="float-item-details">
+                            📍 ${latest.latitude?.toFixed(3)}°, ${latest.longitude?.toFixed(3)}°
+                            ${floatAvgTemp ? ` | 🌡️ ${floatAvgTemp.toFixed(1)}°C` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Set the float list HTML
+            el.floatList.innerHTML = summaryHTML + floatListHTML;
+            
+            // Add click handlers after HTML is in DOM
+            el.floatList.querySelectorAll('.float-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const floatId = item.dataset.floatId;
+                    selectFloat(floatId, localFloatGroups[floatId]);
+                });
+            });
+            
+            // Store data for layer controls
+            currentFloatData = data;
+            
+            // Plot markers on map
+            plotFloatMarkers(data);
+        }
+        
+        function plotFloatMarkers(data) {
+            if (!mapSettings.showFloatMarkers) return;
+            
+            const floatGroups = {};
+            data.forEach(d => {
+                if (d.latitude && d.longitude) {
+                    const id = d.float_id || 'unknown';
+                    if (!floatGroups[id]) floatGroups[id] = [];
+                    floatGroups[id].push(d);
+                }
+            });
+            
+            Object.entries(floatGroups).forEach(([id, points]) => {
+                const latest = points[points.length - 1];
+                
+                // Use enhanced marker creation
+                const marker = createEnhancedMarker(
+                    latest.latitude, 
+                    latest.longitude, 
+                    latest, 
+                    id
+                );
+                
+                marker.addTo(map);
+                marker.on('click', () => selectFloat(id, points));
+                markers.push(marker);
+            });
+            
+            // Update heatmap if enabled
+            if (mapSettings.showTempHeatmap || mapSettings.showSalinityHeatmap) {
+                const heatType = mapSettings.showTempHeatmap ? 'temperature' : 'salinity';
+                updateHeatmapLayer(data, heatType);
+            }
+        }
+        
+        function selectFloat(floatId, points) {
+            selectedFloatId = floatId;
+            
+            // Store local points in floatGroups
+            floatGroups[floatId] = points;
+            
+            // Update selected state in float list
+            el.floatList.querySelectorAll('.float-item').forEach(item => {
+                item.classList.remove('selected');
+                if (item.dataset.floatId === floatId) {
+                    item.classList.add('selected');
+                }
+            });
+            
+            // Hide sections above float list
+            el.clickedLocation.classList.add('hidden');
+            document.querySelector('.summary-stats')?.classList.add('hidden');
+            
+            // Update UI - keep nearby floats visible but add float info
+            el.floatBadge.textContent = `Float ${floatId}`;
+            el.floatBadge.classList.remove('hidden');
+            el.panelTitle.textContent = 'Float Details';
+            el.floatData.classList.add('split-view'); // Enable split view
+            el.nearbyFloats.classList.remove('hidden'); // Keep float list visible
+            el.floatInfo.classList.remove('hidden');
+            el.panelActions.classList.remove('hidden');
+            
+            // Show info
+            const latest = points[points.length - 1];
+            const avgTemp = points.reduce((a, b) => a + (b.temperature || 0), 0) / points.length;
+            const avgSal = points.filter(p => p.salinity).reduce((a, b) => a + b.salinity, 0) / points.filter(p => p.salinity).length;
+            
+            el.infoGrid.innerHTML = `
+                <div class="info-item">
+                    <div class="info-label">🔵 Float ID</div>
+                    <div class="info-value">${floatId}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">📊 Records</div>
+                    <div class="info-value">${points.length}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">📍 Latitude</div>
+                    <div class="info-value">${latest.latitude?.toFixed(4)}°</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">📍 Longitude</div>
+                    <div class="info-value">${latest.longitude?.toFixed(4)}°</div>
+                </div>
+                ${avgTemp ? `
+                <div class="info-item">
+                    <div class="info-label">🌡️ Avg Temp</div>
+                    <div class="info-value">${avgTemp.toFixed(2)}°C</div>
+                </div>` : ''}
+                ${avgSal ? `
+                <div class="info-item">
+                    <div class="info-label">🧪 Avg Salinity</div>
+                    <div class="info-value">${avgSal.toFixed(2)} PSU</div>
+                </div>` : ''}
+            `;
+            
+            // Center map on float
+            map.setView([latest.latitude, latest.longitude], 7);
+            
+            // Add clear selection button
+            addClearSelectionBtn();
+        }
+        
+        function addClearSelectionBtn() {
+            // Remove existing button if any
+            const existing = document.querySelector('.back-to-floats');
+            if (existing) existing.remove();
+            
+            // Create new button
+            const clearBtn = document.createElement('button');
+            clearBtn.className = 'back-to-floats';
+            clearBtn.innerHTML = '✕ Clear Selection';
+            clearBtn.onclick = () => {
+                // Reset selection
+                selectedFloatId = null;
+                el.floatData.classList.remove('split-view');
+                el.floatInfo.classList.add('hidden');
+                el.panelActions.classList.add('hidden');
+                el.floatBadge.classList.add('hidden');
+                el.profileSection.classList.add('hidden');
+                el.trajectorySection.classList.add('hidden');
+                el.panelTitle.textContent = Object.keys(floatGroups).length + ' Floats Found';
+                
+                // Show sections above float list again
+                el.clickedLocation.classList.remove('hidden');
+                document.querySelector('.summary-stats')?.classList.remove('hidden');
+                
+                // Remove selected state from list items
+                el.floatList.querySelectorAll('.float-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                
+                // Clear trajectory from map
+                if (trajectoryPath) {
+                    trajectoryPath.remove();
+                    trajectoryPath = null;
+                }
+                trajectoryMarkers.forEach(m => m.remove());
+                trajectoryMarkers = [];
+                
+                clearBtn.remove();
+            };
+            el.floatInfo.insertBefore(clearBtn, el.floatInfo.firstChild);
+        }
+        
+        async function loadFullFloatData(floatId) {
+            try {
+                el.loadingState.classList.remove('hidden');
+                el.loadingState.querySelector('p').textContent = 'Loading full float data...';
+                
+                const response = await fetch(`/api/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: `Show all data for float ${floatId}` })
+                });
+                
+                const result = await response.json();
+                
+                el.loadingState.classList.add('hidden');
+                
+                if (result.data && result.data.length > 0) {
+                    floatGroups[floatId] = result.data;
+                    return result.data;
+                }
+                return floatGroups[floatId] || [];
+            } catch (error) {
+                el.loadingState.classList.add('hidden');
+                console.error('Error loading full float data:', error);
+                return floatGroups[floatId] || [];
+            }
+        }
+        
+        function showTrajectory(points) {
+            if (!points || points.length < 2) {
+                alert('Not enough data points to show trajectory');
+                return;
+            }
+            
+            // Clear existing trajectory
+            if (trajectoryPath) trajectoryPath.remove();
+            trajectoryMarkers.forEach(m => m.remove());
+            trajectoryMarkers = [];
+            
+            // Sort by time and create path
+            const sorted = [...points].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            const pathPoints = sorted.filter(d => d.latitude && d.longitude).map(d => [d.latitude, d.longitude]);
+            
+            if (pathPoints.length < 2) {
+                alert('Not enough valid coordinates for trajectory');
+                return;
+            }
+            
+            trajectoryPath = L.polyline(pathPoints, {
+                color: '#3b82f6',
+                weight: 3,
+                opacity: 0.8,
+                dashArray: '10, 5'
+            }).addTo(map);
+            
+            // Add start marker (green)
+            const startMarker = L.circleMarker(pathPoints[0], {
+                radius: 10, fillColor: '#22c55e', fillOpacity: 1, color: 'white', weight: 2
+            }).addTo(map).bindPopup(`<strong>🟢 Start</strong><br>${sorted[0].timestamp || 'Unknown date'}`);
+            trajectoryMarkers.push(startMarker);
+            
+            // Add end marker (red)
+            const endMarker = L.circleMarker(pathPoints[pathPoints.length - 1], {
+                radius: 10, fillColor: '#ef4444', fillOpacity: 1, color: 'white', weight: 2
+            }).addTo(map).bindPopup(`<strong>🔴 End</strong><br>${sorted[sorted.length-1].timestamp || 'Unknown date'}`);
+            trajectoryMarkers.push(endMarker);
+            
+            // Calculate distance using haversine
+            let totalDistance = 0;
+            for (let i = 1; i < pathPoints.length; i++) {
+                totalDistance += haversine(pathPoints[i-1][0], pathPoints[i-1][1], pathPoints[i][0], pathPoints[i][1]);
+            }
+            
+            // Calculate time span
+            const startDate = new Date(sorted[0].timestamp);
+            const endDate = new Date(sorted[sorted.length-1].timestamp);
+            const daysDiff = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
+            
+            // Format dates for display
+            const startDateStr = startDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            const endDateStr = endDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            
+            // Show trajectory stats with date range
+            el.trajectorySection.classList.remove('hidden');
+            el.trajectoryStats.innerHTML = `
+                <div class="traj-stat" style="grid-column: span 2;">
+                    <div class="traj-stat-value" style="font-size: 14px; color: var(--accent);">📅 ${startDateStr} → ${endDateStr}</div>
+                    <div class="traj-stat-label">trajectory period</div>
+                </div>
+                <div class="traj-stat">
+                    <div class="traj-stat-value">${totalDistance.toFixed(0)}</div>
+                    <div class="traj-stat-label">km traveled</div>
+                </div>
+                <div class="traj-stat">
+                    <div class="traj-stat-value">${pathPoints.length}</div>
+                    <div class="traj-stat-label">data points</div>
+                </div>
+                <div class="traj-stat">
+                    <div class="traj-stat-value">${daysDiff || '--'}</div>
+                    <div class="traj-stat-label">days</div>
+                </div>
+            `;
+            
+            map.fitBounds(trajectoryPath.getBounds(), { padding: [50, 50] });
+        }
+        
+        let currentProfileData = null;
+        
+        function showProfile(points) {
+            if (!points || points.length === 0) {
+                alert('No data available for visualization');
+                return;
+            }
+            
+            currentProfileData = points;
+            el.profileSection.classList.remove('hidden');
+            
+            // Initialize chart type tab handlers
+            const chartTypeTabs = document.getElementById('chartTypeTabs');
+            chartTypeTabs.querySelectorAll('.chart-type-tab').forEach(tab => {
+                tab.onclick = () => {
+                    chartTypeTabs.querySelectorAll('.chart-type-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    renderChart(tab.dataset.chart, points);
+                };
+            });
+            
+            // Render default chart (temp over time)
+            renderChart('temp-time', points);
+        }
+        
+        function renderChart(chartType, points) {
+            if (chart) chart.destroy();
+            
+            const sorted = [...points].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            const labels = sorted.map(d => {
+                if (d.timestamp) {
+                    const date = new Date(d.timestamp);
+                    return `${date.getMonth()+1}/${date.getDate()}/${date.getFullYear().toString().slice(2)}`;
+                }
+                return '';
+            });
+            
+            let config;
+            
+            switch(chartType) {
+                case 'temp-time':
+                    config = {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Temperature (°C)',
+                                data: sorted.map(d => d.temperature),
+                                borderColor: '#ef4444',
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                fill: true,
+                                tension: 0.3
+                            }]
+                        },
+                        options: getChartOptions('Time', 'Temperature (°C)')
+                    };
+                    break;
+                    
+                case 'sal-time':
+                    config = {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Salinity (PSU)',
+                                data: sorted.map(d => d.salinity),
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                fill: true,
+                                tension: 0.3
+                            }]
+                        },
+                        options: getChartOptions('Time', 'Salinity (PSU)')
+                    };
+                    break;
+                    
+                case 'temp-sal':
+                    // Scatter plot - temp vs salinity
+                    const scatterData = sorted
+                        .filter(d => d.temperature != null && d.salinity != null)
+                        .map(d => ({ x: d.salinity, y: d.temperature }));
+                    config = {
+                        type: 'scatter',
+                        data: {
+                            datasets: [{
+                                label: 'Temp vs Salinity',
+                                data: scatterData,
+                                backgroundColor: '#22c55e',
+                                pointRadius: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { labels: { color: '#94a3b8', font: { size: 10 } } } },
+                            scales: {
+                                x: { title: { display: true, text: 'Salinity (PSU)', color: '#94a3b8' }, ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                                y: { title: { display: true, text: 'Temperature (°C)', color: '#94a3b8' }, ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                            }
+                        }
+                    };
+                    break;
+                    
+                case 'all-time':
+                default:
+                    config = {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                {
+                                    label: 'Temp (°C)',
+                                    data: sorted.map(d => d.temperature),
+                                    borderColor: '#ef4444',
+                                    tension: 0.3,
+                                    yAxisID: 'y'
+                                },
+                                {
+                                    label: 'Salinity',
+                                    data: sorted.map(d => d.salinity),
+                                    borderColor: '#3b82f6',
+                                    tension: 0.3,
+                                    yAxisID: 'y1'
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { labels: { color: '#94a3b8', font: { size: 10 } } } },
+                            scales: {
+                                x: { ticks: { color: '#64748b', font: { size: 8 }, maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                                y: { position: 'left', title: { display: true, text: 'Temp', color: '#ef4444' }, ticks: { color: '#ef4444' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                                y1: { position: 'right', title: { display: true, text: 'Sal', color: '#3b82f6' }, ticks: { color: '#3b82f6' }, grid: { display: false } }
+                            }
+                        }
+                    };
+                    break;
+            }
+            
+            chart = new Chart(el.profileChart.getContext('2d'), config);
+        }
+        
+        function getChartOptions(xLabel, yLabel) {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: '#94a3b8', font: { size: 10 } } } },
+                scales: {
+                    x: { title: { display: true, text: xLabel, color: '#94a3b8' }, ticks: { color: '#64748b', font: { size: 8 }, maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { title: { display: true, text: yLabel, color: '#94a3b8' }, ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            };
+        }
+        
+        function showTimeSeriesProfile(points) {
+            // Redirect to the new showProfile with chart selection
+            showProfile(points);
+        }
+        
+        function exportData() {
+            if (!currentFloatData.length) return;
+            
+            const headers = Object.keys(currentFloatData[0]);
+            const csv = [
+                headers.join(','),
+                ...currentFloatData.map(row => headers.map(h => JSON.stringify(row[h] ?? '')).join(','))
+            ].join('\n');
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `float_${selectedFloatId || 'data'}_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // Haversine distance
+        function haversine(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+    </script>
+</body>
+</html>
