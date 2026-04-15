@@ -231,3 +231,4 @@ Release notes and development milestones.
 - [2026-04-15 11:47] feat(filter): filter profiles by WMO platform number, date range, and sensor QC flags
 - [2026-04-15 13:57] style(hud): design marine dark UI with high-contrast depth gradient scales
 - [2026-04-15 16:07] test(parser): assert NetCDF variable extraction and missing value handling
+- [2026-04-15 18:17] docs(data): document ARGO global ocean observing program data format
